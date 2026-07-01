@@ -1,0 +1,56 @@
+name: Weekday Random Push
+
+permissions:
+  contents: write
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *'
+
+jobs:
+  random_push:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Decide Whether to Run Today
+        run: |
+          if [ $((RANDOM % 2)) -eq 0 ]; then
+            echo "Skipping today."
+            exit 0
+          fi
+
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Generate Random Time
+        run: |
+          HOUR=$((RANDOM % 24))
+          MINUTE=$((RANDOM % 60))
+          RANDOM_TIME=$(date -d "$HOUR:$MINUTE" +"%Y-%m-%d %H:%M:%S")
+          echo "RANDOM_TIME=$RANDOM_TIME" >> $GITHUB_ENV
+
+      - name: Sync With Latest Main
+        run: |
+          git fetch origin main
+          git reset --hard origin/main
+
+      - name: Make Change
+        run: |
+          echo "Updated at $RANDOM_TIME" >> daily_log.txt
+
+      - name: Commit and Push
+        run: |
+          git config user.name "deep-div"
+          git config user.email "div20023041@gmail.com"
+
+          git add daily_log.txt
+
+          GIT_AUTHOR_DATE="$RANDOM_TIME" \
+          GIT_COMMITTER_DATE="$RANDOM_TIME" \
+          git commit -m "Random update"
+
+          git push origin main
