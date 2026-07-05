@@ -6,7 +6,7 @@ permissions:
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 0 * * *'
+    - cron: '0 0 * * 1-5'
 
 jobs:
   random_push:
@@ -14,13 +14,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Decide Whether to Run Today
-        run: |
-          if [ $((RANDOM % 2)) -eq 0 ]; then
-            echo "Skipping today."
-            exit 0
-          fi
-
       - name: Checkout Repository
         uses: actions/checkout@v3
         with:
