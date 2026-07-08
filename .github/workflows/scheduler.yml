@@ -6,7 +6,7 @@ permissions:
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 0 * * 1-5'
+    - cron: '30 14 * * 1-5'
 
 jobs:
   random_push:
