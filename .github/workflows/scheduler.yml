@@ -1,4 +1,4 @@
-name: Weekday Random Push
+name: Cron Job
 
 permissions:
   contents: write
@@ -6,7 +6,7 @@ permissions:
 on:
   workflow_dispatch:
   schedule:
-    - cron: '30 14 * * 1,4,6'
+    - cron: '30 14 * * *'
 
 jobs:
   random_push:
@@ -18,6 +18,21 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
+
+      - name: Decide Whether To Push
+        run: |
+          DAY=$(date +%u)
+          WEEK=$(date +%V)
+          YEAR=$(date +%Y)
+
+          RANDOM_DAYS=$(python -c "import random; random.seed('$YEAR-$WEEK'); print(sorted(random.sample(range(1, 8), 5)))")
+
+          echo "Selected days: $RANDOM_DAYS"
+
+          if [[ ! " $RANDOM_DAYS " =~ " $DAY " ]]; then
+            echo "Today is not selected. Skipping."
+            exit 0
+          fi
 
       - name: Generate Random Time
         run: |
