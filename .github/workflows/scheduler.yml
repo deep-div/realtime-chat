@@ -25,7 +25,7 @@ jobs:
           WEEK=$(date +%V)
           YEAR=$(date +%Y)
 
-          RANDOM_DAYS=$(python -c "import random; random.seed('$YEAR-$WEEK'); print(sorted(random.sample(range(1, 8), 4)))")
+          RANDOM_DAYS=$(python -c "import random; random.seed('$YEAR-$WEEK'); print(sorted(random.sample(range(1, 8), 3)))")
 
           echo "Selected days: $RANDOM_DAYS"
 
