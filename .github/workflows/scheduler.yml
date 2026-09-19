@@ -15,42 +15,50 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Decide Whether To Push
         run: |
-          DAY=$(date +%u)
-          WEEK=$(date +%V)
-          YEAR=$(date +%Y)
+          DAY=$(date -u +%u)
+          WEEK=$(date -u +%V)
+          YEAR=$(date -u +%G)
 
-          RANDOM_DAYS=$(python -c "import random; random.seed('$YEAR-$WEEK'); print(sorted(random.sample(range(1, 8), 3)))")
-
+          # Pick 4 of the 5 weekdays (Mon=1 ... Fri=5), stable for the whole week
+          RANDOM_DAYS=$(python3 -c "import random; random.seed('$YEAR-$WEEK'); print(*sorted(random.sample(range(1, 6), 4)))")
           echo "Selected days: $RANDOM_DAYS"
 
-          if [[ ! " $RANDOM_DAYS " =~ " $DAY " ]]; then
+          if [[ " $RANDOM_DAYS " == *" $DAY "* ]]; then
+            echo "SHOULD_PUSH=true" >> $GITHUB_ENV
+          else
             echo "Today is not selected. Skipping."
-            exit 0
+            echo "SHOULD_PUSH=false" >> $GITHUB_ENV
           fi
 
       - name: Generate Random Time
+        if: env.SHOULD_PUSH == 'true'
         run: |
-          HOUR=$((RANDOM % 24))
+          # 00:00-13:59 UTC so the timestamp is always before the 14:30 run
+          HOUR=$((RANDOM % 14))
           MINUTE=$((RANDOM % 60))
-          RANDOM_TIME=$(date -d "$HOUR:$MINUTE" +"%Y-%m-%d %H:%M:%S")
+          SECOND=$((RANDOM % 60))
+          RANDOM_TIME=$(date -u -d "$HOUR:$MINUTE:$SECOND" +"%Y-%m-%d %H:%M:%S")
           echo "RANDOM_TIME=$RANDOM_TIME" >> $GITHUB_ENV
 
       - name: Sync With Latest Main
+        if: env.SHOULD_PUSH == 'true'
         run: |
           git fetch origin main
           git reset --hard origin/main
 
       - name: Make Change
+        if: env.SHOULD_PUSH == 'true'
         run: |
           echo "Updated at $RANDOM_TIME" >> daily_log.txt
 
       - name: Commit and Push
+        if: env.SHOULD_PUSH == 'true'
         run: |
           git config user.name "deep-div"
           git config user.email "div20023041@gmail.com"
