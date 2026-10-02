@@ -88,6 +88,10 @@ class ConnectionRegistryRepository:
 
         return connections
 
+    async def has_live_connections(self, user_id: str) -> bool:
+        """Check whether a user currently has any live connection (i.e. is online)."""
+        return await redis_client.scard(self._user_key(user_id)) > 0
+
     async def deregister(self, connection_id: str, user_id: str) -> None:
         """Remove a connection on clean socket close."""
         async with redis_client.pipeline() as pipe:

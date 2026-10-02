@@ -6,6 +6,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from app.core.config import settings
 from app.core.logging import logger
 from app.services.presence.connection_registry import connection_registry
+from app.services.presence.get_presence import get_presence
 from app.services.presence.schema import (
     CONNECTION_TTL_SECONDS,
     ClientHandshake,
@@ -47,6 +48,12 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
             message = await websocket.receive_json()
             if message.get("type") == "heartbeat":
                 await connection_registry.heartbeat(connection_id)
+            elif message.get("type") == "get_presence":
+                users = await get_presence.get_presence(message["user_ids"])
+                await websocket.send_json({
+                    "event": "presence",
+                    "users": [user.model_dump(mode="json") for user in users],
+                })
     except WebSocketDisconnect:
-        await connection_registry.deregister(connection_id, handshake.user_id)
+        await get_presence.handle_disconnect(connection_id, handshake.user_id)
         logger.info(f"connection deregistered: {connection_id} user={handshake.user_id}")

@@ -2,6 +2,14 @@ from enum import Enum
 from pydantic import BaseModel, Field
 
 CONNECTION_TTL_SECONDS = 45
+LASTSEEN_CACHE_TTL_SECONDS = 60 * 60 * 24  
+
+
+class PresenceStatus(str, Enum):
+    """Whether a user currently has any live connection."""
+
+    ONLINE = "online"
+    OFFLINE = "offline"
 
 
 class SyncState(str, Enum):
@@ -58,3 +66,19 @@ class ConnectionRegistry(BaseModel):
             last_heartbeat_at=connected_at,
             handshake=handshake,
         )
+
+
+class LastSeenCache(BaseModel):
+    """Cached last-seen fact for an offline user, stored in Redis as a hash at presence:lastseen:{user_id}."""
+
+    last_seen_at: int
+    updated_at: int
+
+
+class UserPresence(BaseModel):
+    """Presence state for one user, as returned to clients by get_presence."""
+
+    user_id: str
+    status: PresenceStatus
+    last_seen: int | None = None
+    updated_at: int
