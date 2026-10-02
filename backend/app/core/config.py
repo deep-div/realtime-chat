@@ -4,8 +4,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     """Application configuration loaded from environment variables or .env."""
 
-    ENVIRONMENT: str 
-    LOG_LEVEL: str 
+    ENVIRONMENT: str
+    LOG_LEVEL: str
+    SERVER_ID: str
 
     REDIS_HOST: str
     REDIS_KEY: str

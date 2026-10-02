@@ -9,7 +9,7 @@ redis_pool = BlockingConnectionPool(
     port=settings.REDIS_PORT,
     password=settings.REDIS_KEY,
     decode_responses=True,
-    max_connections=20,  
-    timeout=None,  
+    max_connections=20,
+    timeout=5,
 )
 redis_client = Redis(connection_pool=redis_pool)
