@@ -16,6 +16,13 @@ LASTSEEN_KEY_PREFIX = "presence:lastseen:"
 WATCHERS_KEY_PREFIX = "presence:watchers:"
 SUBSCRIPTIONS_KEY_PREFIX = "presence:subscriptions:"
 
+# A is subscribed to B. (Chat Opened)
+# C is subscribed to B. (Chat Opened)
+# D is subscribed to B. (Chat Opened)
+# E is subscribed to B. (Chat Opened)
+# B's watchers are A, C, D, and E. (B goes Offline Server notifies all Watchers B is offline.)
+# If B goes offline, A, C, D, and E are notified.
+
 
 class PresenceWatcherRegistry:
     """Tracks which connections are watching each user's presence."""
