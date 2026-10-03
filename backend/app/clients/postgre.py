@@ -1,3 +1,5 @@
+from collections.abc import AsyncGenerator
+
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from app.core.config import settings
@@ -23,3 +25,9 @@ engine = create_async_engine(
 )
 
 AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
+
+
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
+    """FastAPI dependency yielding one session per request, closed when the request ends."""
+    async with AsyncSessionLocal() as session:
+        yield session
