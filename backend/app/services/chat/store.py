@@ -97,6 +97,7 @@ class ChatStore:
         ]
 
         session.add(chat_row)
+        await session.flush()  # insert the parent row before the members that FK to it
         session.add_all(member_rows)
         try:
             await session.commit()
@@ -143,6 +144,7 @@ class ChatStore:
         ]
 
         session.add(chat_row)
+        await session.flush()  # insert the parent row before the members that FK to it
         session.add_all(member_rows)
         await session.commit()
 
