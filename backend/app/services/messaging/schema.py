@@ -4,42 +4,6 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 
-class ChatType(str, Enum):
-    """Whether a chat is a 1:1 direct conversation or a multi-member group."""
-
-    DIRECT = "direct"
-    GROUP = "group"
-
-
-class ChatRole(str, Enum):
-    """A member's permission level within a chat. Direct chats only ever use MEMBER."""
-
-    OWNER = "owner"
-    ADMIN = "admin"
-    MEMBER = "member"
-
-
-class ChatMember(BaseModel):
-    """One user's membership record within a chat."""
-
-    chat_id: str
-    user_id: str
-    role: ChatRole = ChatRole.MEMBER
-    joined_at: int
-    muted_until: int | None = None
-
-
-class Chat(BaseModel):
-    """A conversation: either a 1:1 direct chat or a named group."""
-
-    chat_id: str
-    chat_type: ChatType
-    title: str | None = None
-    avatar_media_id: str | None = None
-    created_by: str
-    created_at: int
-
-
 class MessageStatus(str, Enum):
     """A recipient's delivery state for one message."""
 
