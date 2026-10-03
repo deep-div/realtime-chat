@@ -2,8 +2,13 @@ from __future__ import annotations
 
 import time
 
+from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+
+from app.clients.postgre import AsyncSessionLocal
 from app.clients.redis import redis_client
 from app.services.presence.connection_registry import connection_registry
+from app.services.presence.models import LastSeen
 from app.services.presence.schema import (
     LASTSEEN_CACHE_TTL_SECONDS,
     LastSeenCache,
@@ -146,13 +151,17 @@ class PresenceManager:
         )
 
     async def _get_last_seen(self, user_id: str) -> LastSeenCache | None:
-        """Fetch cached last-seen data for a user."""
+        """Fetch a user's last-seen data, falling back to the DB on a cache miss."""
         data = await redis_client.hgetall(self._last_seen_key(user_id))
 
-        if not data:
-            return None
+        if data:
+            return LastSeenCache(**data)
 
-        return LastSeenCache(**data)
+        cache = await self._get_last_seen_from_db(user_id)
+        if cache is not None:
+            await self._cache_last_seen(user_id, cache)
+
+        return cache
 
     async def _set_last_seen(
         self,
@@ -160,18 +169,51 @@ class PresenceManager:
         last_seen_at: int,
         updated_at: int,
     ) -> None:
-        """Cache a user's last-seen timestamp with a TTL."""
-        key = self._last_seen_key(user_id)
+        """Persist a user's last-seen timestamp to the DB and refresh the cache."""
+        cache = LastSeenCache(last_seen_at=last_seen_at, updated_at=updated_at)
 
-        cache = LastSeenCache(
-            last_seen_at=last_seen_at,
-            updated_at=updated_at,
-        )
+        await self._upsert_last_seen_db(user_id, cache)
+        await self._cache_last_seen(user_id, cache)
+
+    async def _cache_last_seen(self, user_id: str, cache: LastSeenCache) -> None:
+        """Write a user's last-seen data into Redis with a TTL."""
+        key = self._last_seen_key(user_id)
 
         async with redis_client.pipeline() as pipe:
             pipe.hset(key, mapping=cache.model_dump(mode="json"))
             pipe.expire(key, LASTSEEN_CACHE_TTL_SECONDS)
             await pipe.execute()
+
+    async def _get_last_seen_from_db(self, user_id: str) -> LastSeenCache | None:
+        """Read a user's durable last-seen record from Postgres."""
+        async with AsyncSessionLocal() as session:
+            row = await session.scalar(
+                select(LastSeen).where(LastSeen.user_id == user_id)
+            )
+
+        if row is None:
+            return None
+
+        return LastSeenCache(last_seen_at=row.last_seen_at, updated_at=row.updated_at)
+
+    async def _upsert_last_seen_db(self, user_id: str, cache: LastSeenCache) -> None:
+        """Upsert a user's last-seen record in Postgres."""
+        stmt = pg_insert(LastSeen).values(
+            user_id=user_id,
+            last_seen_at=cache.last_seen_at,
+            updated_at=cache.updated_at,
+        )
+        stmt = stmt.on_conflict_do_update(
+            index_elements=[LastSeen.user_id],
+            set_={
+                "last_seen_at": stmt.excluded.last_seen_at,
+                "updated_at": stmt.excluded.updated_at,
+            },
+        )
+
+        async with AsyncSessionLocal() as session:
+            await session.execute(stmt)
+            await session.commit()
 
 
 presence_manager = PresenceManager()
