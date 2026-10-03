@@ -150,6 +150,59 @@ class ChatStore:
 
         return self._to_chat_created(chat_row, member_ids, already_existed=False)
 
+    async def add_member(
+        self, session: AsyncSession, chat_id: str, requester_id: str, user_id: str
+    ) -> ChatMember:
+        """Add a user to a group chat. Only an OWNER/ADMIN of that chat may do this."""
+        chat_row = await session.get(ChatModel, chat_id)
+        if chat_row is None:
+            raise ChatNotFoundError(chat_id)
+        if chat_row.chat_type != ChatType.GROUP.value:
+            raise NotAGroupChatError(chat_id)
+
+        members = await self.list_members(session, chat_id)
+        requester = next((m for m in members if m.user_id == requester_id), None)
+        if requester is None:
+            raise NotAMemberError(requester_id)
+        if requester.role not in (ChatRole.OWNER, ChatRole.ADMIN):
+            raise InsufficientRoleError(requester_id)
+        if any(m.user_id == user_id for m in members):
+            raise AlreadyMemberError(user_id)
+
+        now = int(time.time() * 1000)
+        member_row = ChatMemberModel(
+            chat_id=chat_id, user_id=user_id, role=ChatRole.MEMBER.value, joined_at=now
+        )
+        session.add(member_row)
+        await session.commit()
+        return self._row_to_member(member_row)
+
+    async def remove_member(
+        self, session: AsyncSession, chat_id: str, requester_id: str, user_id: str
+    ) -> None:
+        """Remove a user from a group chat. A member may remove themself (leave);
+        removing someone else requires OWNER/ADMIN."""
+        chat_row = await session.get(ChatModel, chat_id)
+        if chat_row is None:
+            raise ChatNotFoundError(chat_id)
+        if chat_row.chat_type != ChatType.GROUP.value:
+            raise NotAGroupChatError(chat_id)
+
+        members = await self.list_members(session, chat_id)
+        requester = next((m for m in members if m.user_id == requester_id), None)
+        if requester is None:
+            raise NotAMemberError(requester_id)
+        if not any(m.user_id == user_id for m in members):
+            raise NotAMemberError(user_id)
+
+        is_self_leave = requester_id == user_id
+        if not is_self_leave and requester.role not in (ChatRole.OWNER, ChatRole.ADMIN):
+            raise InsufficientRoleError(requester_id)
+
+        member_row = await session.get(ChatMemberModel, (chat_id, user_id))
+        await session.delete(member_row)
+        await session.commit()
+
     async def get_chat(self, session: AsyncSession, chat_id: str) -> Chat | None:
         """Fetch one chat by id, or None if it doesn't exist."""
         row = await session.get(ChatModel, chat_id)
@@ -220,6 +273,26 @@ class ChatStore:
             created_at=chat.created_at,
             already_existed=already_existed,
         )
+
+
+class ChatNotFoundError(Exception):
+    """Raised when a chat_id doesn't exist."""
+
+
+class NotAGroupChatError(Exception):
+    """Raised when a group-only operation targets a direct chat."""
+
+
+class NotAMemberError(Exception):
+    """Raised when a user referenced isn't (or isn't yet) a member of the chat."""
+
+
+class InsufficientRoleError(Exception):
+    """Raised when the requester's role doesn't permit the action."""
+
+
+class AlreadyMemberError(Exception):
+    """Raised when adding a user who is already a member."""
 
 
 chat_store = ChatStore()

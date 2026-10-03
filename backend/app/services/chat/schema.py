@@ -58,6 +58,12 @@ class CreateGroupChat(BaseModel):
 CreateChat = CreateDirectChat | CreateGroupChat
 
 
+class AddMember(BaseModel):
+    """Request to add a user to an existing group chat."""
+
+    user_id: str
+
+
 class ChatCreated(BaseModel):
     """Response to a create_chat request: the resolved chat, new or pre-existing."""
 
