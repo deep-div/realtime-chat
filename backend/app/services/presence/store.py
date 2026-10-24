@@ -86,7 +86,7 @@ class PresenceWatcherRegistry:
             await pipe.execute()
 
 
-class PresenceManager:
+class PresenceStore:
     """Handles user online/offline presence and last-seen state."""
 
     @staticmethod
@@ -216,5 +216,5 @@ class PresenceManager:
             await session.commit()
 
 
-presence_manager = PresenceManager()
+presence_store = PresenceStore()
 presence_watcher_registry = PresenceWatcherRegistry()

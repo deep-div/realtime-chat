@@ -11,13 +11,13 @@ from app.services.chat.store import ChatNotFoundError, NotAMemberError
 from app.services.messaging.schema import MessageAck, MessageStatus, SendMessage
 from app.services.messaging.store import MessageNotFoundError, message_store
 from app.services.presence.connection_registry import connection_registry
-from app.services.presence.user_presence import presence_manager
+from backend.app.services.presence.store import presence_store
 from app.services.presence.schema import (
     CONNECTION_TTL_SECONDS,
     ClientHandshake,
     ConnectionRegistry,
 )
-from app.services.presence.user_presence import presence_watcher_registry
+from backend.app.services.presence.store import presence_watcher_registry
 
 router = APIRouter()
 
@@ -68,7 +68,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
             if message.get("type") == "heartbeat":
                 await connection_registry.heartbeat(connection_id)
             elif message.get("type") == "get_presence":
-                users = await presence_manager.get_user_presence(message["user_ids"])
+                users = await presence_store.get_user_presence(message["user_ids"])
                 await websocket.send_json({
                     "event": "presence",
                     "users": [user.model_dump(mode="json") for user in users],
@@ -132,7 +132,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
         local_connections.pop(connection_id, None)
         await presence_watcher_registry.clear_connection(connection_id)
 
-        offline_presence = await presence_manager.handle_disconnect(connection_id, handshake.user_id)
+        offline_presence = await presence_store.handle_disconnect(connection_id, handshake.user_id)
         if offline_presence is not None:
             await notify_watchers(handshake.user_id, offline_presence, local_connections)
 
