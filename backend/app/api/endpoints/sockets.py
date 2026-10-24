@@ -3,6 +3,7 @@ import uuid
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
+from app.api.endpoints.connections import deliver_message, notify_watchers
 from app.clients.postgre import AsyncSessionLocal
 from app.core.config import settings
 from app.core.logging import logger
@@ -15,7 +16,6 @@ from app.services.presence.schema import (
     CONNECTION_TTL_SECONDS,
     ClientHandshake,
     ConnectionRegistry,
-    UserPresence,
 )
 from app.services.presence.user_presence import presence_watcher_registry
 
@@ -32,15 +32,6 @@ async def websocket_docs() -> dict:
 # Redis knows *that* a connection exists; only the process holding it can push to it.
 local_connections: dict[str, WebSocket] = {}
 
-
-async def notify_watchers(user_id: str, presence: UserPresence) -> None:
-    """Push a presence update to every connection (on this server) watching this user."""
-    watcher_ids = await presence_watcher_registry.get_user_watchers(user_id)
-    payload = {"event": "presence_update", "users": [presence.model_dump(mode="json")]}
-    for watcher_id in watcher_ids:
-        watcher_socket = local_connections.get(watcher_id)
-        if watcher_socket is not None:
-            await watcher_socket.send_json(payload)
 
 @router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket) -> None:
@@ -108,16 +99,18 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                     else:
                         # Single tick: tell the sender their message is durably stored.
                         await websocket.send_json({
-                            "type": "message_sent",
+                            "type": "message_status",
+                            "status": "sent",
                             "message": chat_message.model_dump(mode="json"),
                         })
+                        await deliver_message(session, chat_message, websocket, local_connections)
     except WebSocketDisconnect:
         local_connections.pop(connection_id, None)
         await presence_watcher_registry.clear_connection(connection_id)
 
         offline_presence = await presence_manager.handle_disconnect(connection_id, handshake.user_id)
         if offline_presence is not None:
-            await notify_watchers(handshake.user_id, offline_presence)
+            await notify_watchers(handshake.user_id, offline_presence, local_connections)
 
         logger.info(f"connection deregistered: {connection_id} user={handshake.user_id}")
         
