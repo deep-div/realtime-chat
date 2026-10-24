@@ -209,7 +209,7 @@ class MessageStore:
     async def mark_delivered(
         self, session: AsyncSession, user_id: str, messages: list[ChatMessage]
     ) -> None:
-        """Record DELIVERED receipts for user_id after a backlog of messages has been pushed to them."""
+        """DB Record DELIVERED receipts for user_id after a backlog of messages has been pushed to them."""
         if not messages:
             return
         now = int(time.time() * 1000)
