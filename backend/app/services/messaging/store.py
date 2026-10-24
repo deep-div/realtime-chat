@@ -4,14 +4,15 @@ import time
 import uuid
 
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.clients.redis import redis_client
 from app.core.logging import logger
 from app.services.chat.store import ChatNotFoundError, NotAMemberError, chat_store
-from app.services.messaging.models import MessageModel
-from app.services.messaging.schema import ChatMessage, EncryptedContent, SendMessage
+from app.services.messaging.models import MessageModel, MessageReceiptModel
+from app.services.messaging.schema import ChatMessage, EncryptedContent, MessageStatus, SendMessage
 
 MESSAGE_CACHE_PREFIX = "chat:messages:"
 MESSAGE_CACHE_MAX = 100
@@ -115,6 +116,49 @@ class MessageStore:
         await self._cache_message(message)
         return message
 
+    async def get_recipient_ids(
+        self, session: AsyncSession, chat_id: str, exclude_user_id: str
+    ) -> list[str]:
+        """List a chat's other member ids, excluding one (e.g. the sender or reader)."""
+        members = await chat_store.list_members(session, chat_id)
+        return [member.user_id for member in members if member.user_id != exclude_user_id]
+
+    async def mark_read(
+        self, session: AsyncSession, reader_id: str, chat_id: str, message_id: str
+    ) -> None:
+        """Record that reader_id has read a message, after confirming they belong to chat_id.
+
+        Takes chat_id from the client (it's already on their screen) so membership can be
+        checked without first loading the message row, and recipients can be resolved by
+        chat membership instead of needing the message's sender_id.
+        """
+        members = await chat_store.list_members(session, chat_id)
+        if not any(member.user_id == reader_id for member in members):
+            raise NotAMemberError(reader_id)
+
+        exists = await session.scalar(
+            select(MessageModel.message_id).where(
+                MessageModel.message_id == message_id, MessageModel.chat_id == chat_id
+            )
+        )
+        if exists is None:
+            raise MessageNotFoundError(message_id)
+
+        now = int(time.time() * 1000)
+        stmt = pg_insert(MessageReceiptModel).values(
+            message_id=message_id,
+            chat_id=chat_id,
+            user_id=reader_id,
+            status=MessageStatus.READ.value,
+            updated_at=now,
+        )
+        stmt = stmt.on_conflict_do_update(
+            index_elements=[MessageReceiptModel.message_id, MessageReceiptModel.user_id],
+            set_={"status": stmt.excluded.status, "updated_at": stmt.excluded.updated_at},
+        )
+        await session.execute(stmt)
+        await session.commit()
+
     async def get_messages(
         self, session: AsyncSession, chat_id: str, limit: int = 50
     ) -> list[ChatMessage]:
@@ -160,6 +204,10 @@ class MessageStore:
             edited_at=row.edited_at,
             deleted_at=row.deleted_at,
         )
+
+
+class MessageNotFoundError(Exception):
+    """Raised when a message_id doesn't exist."""
 
 
 message_store = MessageStore()

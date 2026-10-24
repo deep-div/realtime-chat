@@ -9,7 +9,7 @@ from app.clients.postgre import Base
 from app.core.config import settings
 from app.services.presence.models import LastSeen  
 from app.services.chat.models import ChatMemberModel, ChatModel  
-from app.services.messaging.models import MessageModel  
+from app.services.messaging.models import MessageModel, MessageReceiptModel
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

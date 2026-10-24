@@ -25,3 +25,21 @@ class MessageModel(Base):
             "chat_id", "sender_id", "client_message_id", name="uq_messages_client_dedup"
         ),
     )
+
+
+class MessageReceiptModel(Base):
+    """One recipient's delivery/read state for a message."""
+
+    __tablename__ = "message_receipts"
+
+    message_id: Mapped[str] = mapped_column(
+        String, ForeignKey("messages.message_id"), primary_key=True
+    )
+    chat_id: Mapped[str] = mapped_column(String)
+    user_id: Mapped[str] = mapped_column(String, primary_key=True)
+    status: Mapped[str] = mapped_column(String)
+    updated_at: Mapped[int] = mapped_column(BigInteger)
+
+    __table_args__ = (
+        Index("ix_message_receipts_chat_id_user_id", "chat_id", "user_id"),
+    )

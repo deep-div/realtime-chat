@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import Literal
 
 from pydantic import BaseModel
 
@@ -43,10 +44,11 @@ class ChatMessage(BaseModel):
 
 
 class MessageAck(BaseModel):
-    """Status update a client sends when it delivers or reads a message."""
+    """Sent by a client when it reads a message. Delivery is inferred server-side, not acked."""
 
+    chat_id: str
     message_id: str
-    status: MessageStatus
+    status: Literal[MessageStatus.READ] = MessageStatus.READ
 
 
 class MessageReceipt(BaseModel):

@@ -3,13 +3,13 @@ import uuid
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
-from app.api.endpoints.connections import deliver_message, notify_watchers
+from app.api.endpoints.connections import deliver_message, notify_read, notify_watchers
 from app.clients.postgre import AsyncSessionLocal
 from app.core.config import settings
 from app.core.logging import logger
 from app.services.chat.store import ChatNotFoundError, NotAMemberError
-from app.services.messaging.schema import SendMessage
-from app.services.messaging.store import message_store
+from app.services.messaging.schema import MessageAck, MessageStatus, SendMessage
+from app.services.messaging.store import MessageNotFoundError, message_store
 from app.services.presence.connection_registry import connection_registry
 from app.services.presence.user_presence import presence_manager
 from app.services.presence.schema import (
@@ -100,10 +100,34 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                         # Single tick: tell the sender their message is durably stored.
                         await websocket.send_json({
                             "type": "message_status",
-                            "status": "sent",
+                            "status": MessageStatus.SENT.value,
                             "message": chat_message.model_dump(mode="json"),
                         })
                         await deliver_message(session, chat_message, websocket, local_connections)
+            elif message.get("type") == "message_ack":
+                ack = MessageAck(**message)
+                async with AsyncSessionLocal() as session:
+                    try:
+                        await message_store.mark_read(
+                            session, handshake.user_id, ack.chat_id, ack.message_id
+                        )
+                    except NotAMemberError:
+                        await websocket.send_json({
+                            "type": "message_error",
+                            "message_id": ack.message_id,
+                            "error": "not a member of this chat",
+                        })
+                    except MessageNotFoundError:
+                        await websocket.send_json({
+                            "type": "message_error",
+                            "message_id": ack.message_id,
+                            "error": "message not found",
+                        })
+                    else:
+                        # Blue tick: tell the other chat members this message has been read.
+                        await notify_read(
+                            session, ack.chat_id, ack.message_id, handshake.user_id, local_connections
+                        )
     except WebSocketDisconnect:
         local_connections.pop(connection_id, None)
         await presence_watcher_registry.clear_connection(connection_id)
