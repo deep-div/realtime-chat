@@ -35,6 +35,7 @@ async def deliver_message(
     delivered = False
     for recipient_id in recipient_ids:
         connections = await connection_registry.get_connections_for_user(recipient_id)
+        recipient_delivered = False
         for conn in connections:
             recipient_socket = local_connections.get(conn.connection_id)
             if recipient_socket is not None:
@@ -43,6 +44,10 @@ async def deliver_message(
                     "message": chat_message.model_dump(mode="json"),
                 })
                 delivered = True
+                recipient_delivered = True
+
+        if recipient_delivered:
+            await message_store.mark_delivered(session, recipient_id, [chat_message])
 
     if delivered:
         # Grey double tick: delivered to at least one recipient's device, not yet read.
@@ -51,6 +56,21 @@ async def deliver_message(
             "message_id": chat_message.message_id,
             "status": MessageStatus.DELIVERED.value,
         })
+
+
+async def deliver_backlog(session, user_id: str, websocket: WebSocket) -> None:
+    """Push any messages user_id missed while offline, then mark them delivered."""
+    missed = await message_store.get_undelivered_messages(session, user_id)
+    if not missed:
+        return
+
+    for chat_message in missed:
+        await websocket.send_json({
+            "event": "new_message",
+            "message": chat_message.model_dump(mode="json"),
+        })
+
+    await message_store.mark_delivered(session, user_id, missed)
 
 
 async def notify_read(

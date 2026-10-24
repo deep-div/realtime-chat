@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.clients.redis import redis_client
 from app.core.logging import logger
+from app.services.chat.models import ChatMemberModel
 from app.services.chat.store import ChatNotFoundError, NotAMemberError, chat_store
 from app.services.messaging.models import MessageModel, MessageReceiptModel
 from app.services.messaging.schema import ChatMessage, EncryptedContent, MessageStatus, SendMessage
@@ -178,6 +179,57 @@ class MessageStore:
 
         await self._cache_messages_bulk(chat_id, messages)
         return messages
+
+    async def get_undelivered_messages(
+        self, session: AsyncSession, user_id: str
+    ) -> list[ChatMessage]:
+        """Fetch messages in user_id's chats that have no delivery/read receipt yet for them.
+
+        Used to backfill a user's missed messages when they reconnect after being offline.
+        Excludes messages they sent themselves, since a sender doesn't need a receipt for its own message.
+        """
+        result = await session.execute(
+            select(MessageModel)
+            .join(ChatMemberModel, ChatMemberModel.chat_id == MessageModel.chat_id)
+            .where(
+                ChatMemberModel.user_id == user_id,
+                MessageModel.sender_id != user_id,
+                ~select(MessageReceiptModel.message_id)
+                .where(
+                    MessageReceiptModel.message_id == MessageModel.message_id,
+                    MessageReceiptModel.user_id == user_id,
+                )
+                .exists(),
+            )
+            .order_by(MessageModel.sent_at.asc())
+        )
+        rows = list(result.scalars().all())
+        return [self._row_to_message(row) for row in rows]
+
+    async def mark_delivered(
+        self, session: AsyncSession, user_id: str, messages: list[ChatMessage]
+    ) -> None:
+        """Record DELIVERED receipts for user_id after a backlog of messages has been pushed to them."""
+        if not messages:
+            return
+        now = int(time.time() * 1000)
+        stmt = pg_insert(MessageReceiptModel).values(
+            [
+                {
+                    "message_id": message.message_id,
+                    "chat_id": message.chat_id,
+                    "user_id": user_id,
+                    "status": MessageStatus.DELIVERED.value,
+                    "updated_at": now,
+                }
+                for message in messages
+            ]
+        )
+        stmt = stmt.on_conflict_do_nothing(
+            index_elements=[MessageReceiptModel.message_id, MessageReceiptModel.user_id]
+        )
+        await session.execute(stmt)
+        await session.commit()
 
     async def _get_by_client_message_id(
         self, session: AsyncSession, chat_id: str, sender_id: str, client_message_id: str

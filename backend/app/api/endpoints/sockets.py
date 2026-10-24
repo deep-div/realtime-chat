@@ -3,7 +3,12 @@ import uuid
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
-from app.api.endpoints.connections import deliver_message, notify_read, notify_watchers
+from app.api.endpoints.connections import (
+    deliver_backlog,
+    deliver_message,
+    notify_read,
+    notify_watchers,
+)
 from app.clients.postgre import AsyncSessionLocal
 from app.core.config import settings
 from app.core.logging import logger
@@ -61,6 +66,9 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
         "heartbeat_interval_seconds": CONNECTION_TTL_SECONDS // 3,
         "ttl_seconds": CONNECTION_TTL_SECONDS,
     })
+
+    async with AsyncSessionLocal() as session:
+        await deliver_backlog(session, handshake.user_id, websocket)
 
     try:
         while True:
