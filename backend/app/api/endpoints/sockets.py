@@ -74,7 +74,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
     })
 
     async with AsyncSessionLocal() as session:
-        await deliver_backlog(session, handshake.user_id, websocket)
+        await deliver_backlog(session, handshake.user_id, websocket, local_connections)
     await connection_registry.mark_ready(connection_id)
 
     try:

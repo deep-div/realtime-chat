@@ -21,6 +21,24 @@ async def notify_watchers(
             await watcher_socket.send_json(payload)
 
 
+async def notify_status(
+    user_id: str,
+    message_id: str,
+    status: MessageStatus,
+    local_connections: dict[str, WebSocket],
+) -> None:
+    """Push a message_status update to every live connection (on this process) a user has."""
+    connections = await connection_registry.get_connections_for_user(user_id)
+    for conn in connections:
+        socket = local_connections.get(conn.connection_id)
+        if socket is not None:
+            await socket.send_json({
+                "type": "message_status",
+                "message_id": message_id,
+                "status": status.value,
+            })
+
+
 async def deliver_message(
     session,
     chat_message: ChatMessage,
@@ -58,8 +76,11 @@ async def deliver_message(
         })
 
 
-async def deliver_backlog(session, user_id: str, websocket: WebSocket) -> None:
-    """Push any messages user_id missed while offline, then mark them delivered."""
+async def deliver_backlog(
+    session, user_id: str, websocket: WebSocket, local_connections: dict[str, WebSocket]
+) -> None:
+    """Push any messages user_id missed while offline, mark them delivered, and
+    grey-tick each message's original sender if they're online right now."""
     missed = await message_store.get_undelivered_messages(session, user_id)
     if not missed:
         return
@@ -72,6 +93,11 @@ async def deliver_backlog(session, user_id: str, websocket: WebSocket) -> None:
 
     await message_store.mark_delivered(session, user_id, missed)
 
+    for chat_message in missed:
+        await notify_status(
+            chat_message.sender_id, chat_message.message_id, MessageStatus.DELIVERED, local_connections
+        )
+
 
 async def notify_read(
     session,
@@ -83,12 +109,4 @@ async def notify_read(
     """Push a blue-tick read status to the message's other chat members, if online on this process."""
     recipient_ids = await message_store.get_recipient_ids(session, chat_id, reader_id)
     for recipient_id in recipient_ids:
-        connections = await connection_registry.get_connections_for_user(recipient_id)
-        for conn in connections:
-            recipient_socket = local_connections.get(conn.connection_id)
-            if recipient_socket is not None:
-                await recipient_socket.send_json({
-                    "type": "message_status",
-                    "message_id": message_id,
-                    "status": MessageStatus.READ.value,
-                })
+        await notify_status(recipient_id, message_id, MessageStatus.READ, local_connections)
