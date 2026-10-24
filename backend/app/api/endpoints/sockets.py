@@ -3,8 +3,12 @@ import uuid
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
+from app.clients.postgre import AsyncSessionLocal
 from app.core.config import settings
 from app.core.logging import logger
+from app.services.chat.store import ChatNotFoundError, NotAMemberError
+from app.services.messaging.schema import SendMessage
+from app.services.messaging.store import message_store
 from app.services.presence.connection_registry import connection_registry
 from app.services.presence.user_presence import presence_manager
 from app.services.presence.schema import (
@@ -82,6 +86,31 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                 await presence_watcher_registry.watch_users(connection_id, message["user_ids"])
             elif message.get("type") == "unsubscribe_presence":
                 await presence_watcher_registry.unwatch_users(connection_id, message["user_ids"])
+            elif message.get("type") == "send_message":
+                request = SendMessage(**message)
+                async with AsyncSessionLocal() as session:
+                    try:
+                        chat_message = await message_store.send_message(
+                            session, handshake.user_id, request
+                        )
+                    except ChatNotFoundError:
+                        await websocket.send_json({
+                            "type": "message_error",
+                            "client_message_id": request.client_message_id,
+                            "error": "chat not found",
+                        })
+                    except NotAMemberError:
+                        await websocket.send_json({
+                            "type": "message_error",
+                            "client_message_id": request.client_message_id,
+                            "error": "not a member of this chat",
+                        })
+                    else:
+                        # Single tick: tell the sender their message is durably stored.
+                        await websocket.send_json({
+                            "type": "message_sent",
+                            "message": chat_message.model_dump(mode="json"),
+                        })
     except WebSocketDisconnect:
         local_connections.pop(connection_id, None)
         await presence_watcher_registry.clear_connection(connection_id)
