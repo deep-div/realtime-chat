@@ -1,7 +1,7 @@
 import time
 import uuid
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status
 
 from app.api.endpoints.connections import (
     deliver_backlog,
@@ -55,7 +55,13 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
         connection_id=connection_id,
         connected_at=connected_at,
     )
-    await connection_registry.register(conn)
+    try:
+        await connection_registry.register(conn)
+    except Exception:
+        logger.error(f"connection registration failed for user={handshake.user_id}, closing socket")
+        await websocket.close(code=status.WS_1011_INTERNAL_ERROR)
+        return
+
     local_connections[connection_id] = websocket
     logger.info(f"connection registered: {connection_id} user={handshake.user_id}")
 
@@ -69,6 +75,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
 
     async with AsyncSessionLocal() as session:
         await deliver_backlog(session, handshake.user_id, websocket)
+    await connection_registry.mark_ready(connection_id)
 
     try:
         while True:
