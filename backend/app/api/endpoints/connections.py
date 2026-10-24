@@ -4,7 +4,7 @@ from app.services.messaging.schema import ChatMessage, MessageStatus
 from app.services.messaging.store import message_store
 from app.services.presence.connection_registry import connection_registry
 from app.services.presence.schema import UserPresence
-from backend.app.services.presence.store import presence_watcher_registry
+from app.services.presence.store import presence_watcher_registry
 
 
 async def notify_watchers(

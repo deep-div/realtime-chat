@@ -16,13 +16,13 @@ from app.services.chat.store import ChatNotFoundError, NotAMemberError
 from app.services.messaging.schema import MessageAck, MessageStatus, SendMessage
 from app.services.messaging.store import MessageNotFoundError, message_store
 from app.services.presence.connection_registry import connection_registry
-from backend.app.services.presence.store import presence_store
+from app.services.presence.store import presence_store
 from app.services.presence.schema import (
     CONNECTION_TTL_SECONDS,
     ClientHandshake,
     ConnectionRegistry,
 )
-from backend.app.services.presence.store import presence_watcher_registry
+from app.services.presence.store import presence_watcher_registry
 
 router = APIRouter()
 
