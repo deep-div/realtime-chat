@@ -17,6 +17,13 @@ from app.services.presence.user_presence import presence_watcher_registry
 
 router = APIRouter()
 
+@router.get(
+    "/ws/docs",
+    summary="WebSocket protocol reference (not a real endpoint)",
+)
+async def websocket_docs() -> dict:
+    return {"status": "ok", "detail": "Reference only, connect to /ws via WebSocket."}
+
 # Live WebSocket objects for connections on this process, keyed by connection_id.
 # Redis knows *that* a connection exists; only the process holding it can push to it.
 local_connections: dict[str, WebSocket] = {}
