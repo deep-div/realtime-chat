@@ -7,6 +7,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.clients.postgre import AsyncSessionLocal
 from app.clients.redis import redis_client
+from app.core.logging import logger
 from app.services.presence.connection_registry import connection_registry
 from app.services.presence.models import LastSeen
 from app.services.presence.schema import (
@@ -151,8 +152,12 @@ class PresenceStore:
         )
 
     async def _get_last_seen(self, user_id: str) -> LastSeenCache | None:
-        """Fetch a user's last-seen data, falling back to the DB on a cache miss."""
-        data = await redis_client.hgetall(self._last_seen_key(user_id))
+        """Fetch a user's last-seen data, falling back to the DB on a cache miss or outage."""
+        try:
+            data = await redis_client.hgetall(self._last_seen_key(user_id))
+        except Exception:
+            logger.warning("last-seen cache read failed, falling back to DB", exc_info=True)
+            data = None
 
         if data:
             return LastSeenCache(**data)
@@ -176,13 +181,20 @@ class PresenceStore:
         await self._cache_last_seen(user_id, cache)
 
     async def _cache_last_seen(self, user_id: str, cache: LastSeenCache) -> None:
-        """Write a user's last-seen data into Redis with a TTL."""
+        """Best-effort write-through of a user's last-seen data into Redis.
+
+        Postgres already has the durable row, so a cache write failure must never
+        fail the caller - it just means the next read falls back to the DB.
+        """
         key = self._last_seen_key(user_id)
 
-        async with redis_client.pipeline() as pipe:
-            pipe.hset(key, mapping=cache.model_dump(mode="json"))
-            pipe.expire(key, LASTSEEN_CACHE_TTL_SECONDS)
-            await pipe.execute()
+        try:
+            async with redis_client.pipeline() as pipe:
+                pipe.hset(key, mapping=cache.model_dump(mode="json"))
+                pipe.expire(key, LASTSEEN_CACHE_TTL_SECONDS)
+                await pipe.execute()
+        except Exception:
+            logger.warning("last-seen cache write failed, DB row is still authoritative", exc_info=True)
 
     async def _get_last_seen_from_db(self, user_id: str) -> LastSeenCache | None:
         """Read a user's durable last-seen record from Postgres."""
