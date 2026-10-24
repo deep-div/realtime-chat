@@ -23,6 +23,15 @@ from app.services.chat.schema import (
 DIRECT_CHAT_CACHE_PREFIX = "chat:direct_pair:"
 DIRECT_CHAT_CACHE_TTL_SECONDS = 60 * 60 * 24
 
+CHAT_CACHE_PREFIX = "chat:detail:"
+CHAT_CACHE_TTL_SECONDS = 60 * 60 * 24
+
+MEMBERS_CACHE_PREFIX = "chat:members:"
+MEMBERS_CACHE_TTL_SECONDS = 60 * 60 * 24
+
+USER_CHATS_CACHE_PREFIX = "chat:user_chats:"
+USER_CHATS_CACHE_TTL_SECONDS = 60 * 60 * 24
+
 
 class ChatStore:
 
@@ -53,6 +62,95 @@ class ChatStore:
                 await pipe.execute()
         except Exception:
             logger.warning("chat cache write failed, DB row is still authoritative", exc_info=True)
+
+    @staticmethod
+    def _chat_key(chat_id: str) -> str:
+        """Build the Redis key caching one chat's metadata row."""
+        return f"{CHAT_CACHE_PREFIX}{chat_id}"
+
+    @staticmethod
+    def _members_key(chat_id: str) -> str:
+        """Build the Redis key caching one chat's member list."""
+        return f"{MEMBERS_CACHE_PREFIX}{chat_id}"
+
+    async def _get_cached_chat(self, chat_id: str) -> Chat | None:
+        """Read a chat's metadata from Redis. Falls back to a miss on any cache error."""
+        try:
+            raw = await redis_client.get(self._chat_key(chat_id))
+        except Exception:
+            logger.warning("chat detail cache read failed, falling back to DB", exc_info=True)
+            return None
+        return Chat.model_validate_json(raw) if raw else None
+
+    async def _cache_chat(self, chat: Chat) -> None:
+        """Best-effort write-through of a chat's metadata into Redis."""
+        try:
+            await redis_client.set(
+                self._chat_key(chat.chat_id), chat.model_dump_json(), ex=CHAT_CACHE_TTL_SECONDS
+            )
+        except Exception:
+            logger.warning("chat detail cache write failed, DB row is still authoritative", exc_info=True)
+
+    async def _get_cached_members(self, chat_id: str) -> list[ChatMember] | None:
+        """Read a chat's member list from Redis. Falls back to a miss on any cache error."""
+        try:
+            raw = await redis_client.get(self._members_key(chat_id))
+        except Exception:
+            logger.warning("chat members cache read failed, falling back to DB", exc_info=True)
+            return None
+        if not raw:
+            return None
+        return [ChatMember.model_validate_json(item) for item in raw.split("\n")]
+
+    async def _cache_members(self, chat_id: str, members: list[ChatMember]) -> None:
+        """Best-effort write-through of a chat's member list into Redis."""
+        try:
+            payload = "\n".join(member.model_dump_json() for member in members)
+            await redis_client.set(
+                self._members_key(chat_id), payload, ex=MEMBERS_CACHE_TTL_SECONDS
+            )
+        except Exception:
+            logger.warning("chat members cache write failed, DB rows are still authoritative", exc_info=True)
+
+    async def _invalidate_members_cache(self, chat_id: str) -> None:
+        """Drop a chat's cached member list after a membership change, so the next read refetches from DB."""
+        try:
+            await redis_client.delete(self._members_key(chat_id))
+        except Exception:
+            logger.warning("chat members cache invalidation failed", exc_info=True)
+
+    @staticmethod
+    def _user_chats_key(user_id: str) -> str:
+        """Build the Redis key caching one user's chat list."""
+        return f"{USER_CHATS_CACHE_PREFIX}{user_id}"
+
+    async def _get_cached_user_chats(self, user_id: str) -> list[Chat] | None:
+        """Read a user's chat list from Redis. Falls back to a miss on any cache error."""
+        try:
+            raw = await redis_client.get(self._user_chats_key(user_id))
+        except Exception:
+            logger.warning("user chats cache read failed, falling back to DB", exc_info=True)
+            return None
+        if not raw:
+            return None
+        return [Chat.model_validate_json(item) for item in raw.split("\n")]
+
+    async def _cache_user_chats(self, user_id: str, chats: list[Chat]) -> None:
+        """Best-effort write-through of a user's chat list into Redis."""
+        try:
+            payload = "\n".join(chat.model_dump_json() for chat in chats)
+            await redis_client.set(
+                self._user_chats_key(user_id), payload, ex=USER_CHATS_CACHE_TTL_SECONDS
+            )
+        except Exception:
+            logger.warning("user chats cache write failed, DB rows are still authoritative", exc_info=True)
+
+    async def _invalidate_user_chats_cache(self, user_id: str) -> None:
+        """Drop a user's cached chat list after their chat memberships change."""
+        try:
+            await redis_client.delete(self._user_chats_key(user_id))
+        except Exception:
+            logger.warning("user chats cache invalidation failed", exc_info=True)
 
     async def create_direct_chat(
         self, session: AsyncSession, requester_id: str, request: CreateDirectChat
@@ -112,6 +210,8 @@ class ChatStore:
             return self._to_chat_created(winner_chat, winner_members, already_existed=True)
 
         await self._cache_direct_pair(user_min, user_max, chat_id, now)
+        for member_id in direct_member_ids:
+            await self._invalidate_user_chats_cache(member_id)
         return self._to_chat_created(chat_row, list(direct_member_ids), already_existed=False)
 
     async def create_group_chat(
@@ -148,6 +248,8 @@ class ChatStore:
         session.add_all(member_rows)
         await session.commit()
 
+        for member_id in member_ids:
+            await self._invalidate_user_chats_cache(member_id)
         return self._to_chat_created(chat_row, member_ids, already_existed=False)
 
     async def add_member(
@@ -175,6 +277,8 @@ class ChatStore:
         )
         session.add(member_row)
         await session.commit()
+        await self._invalidate_members_cache(chat_id)
+        await self._invalidate_user_chats_cache(user_id)
         return self._row_to_member(member_row)
 
     async def remove_member(
@@ -202,27 +306,50 @@ class ChatStore:
         member_row = await session.get(ChatMemberModel, (chat_id, user_id))
         await session.delete(member_row)
         await session.commit()
+        await self._invalidate_members_cache(chat_id)
+        await self._invalidate_user_chats_cache(user_id)
 
     async def get_chat(self, session: AsyncSession, chat_id: str) -> Chat | None:
-        """Fetch one chat by id, or None if it doesn't exist."""
+        """Fetch one chat by id, or None if it doesn't exist. Reads Redis before Postgres."""
+        cached = await self._get_cached_chat(chat_id)
+        if cached is not None:
+            return cached
+
         row = await session.get(ChatModel, chat_id)
-        return self._row_to_chat(row) if row is not None else None
+        if row is None:
+            return None
+
+        chat = self._row_to_chat(row)
+        await self._cache_chat(chat)
+        return chat
 
     async def list_members(self, session: AsyncSession, chat_id: str) -> list[ChatMember]:
-        """Fetch every member of a chat."""
+        """Fetch every member of a chat. Reads Redis before Postgres."""
+        cached = await self._get_cached_members(chat_id)
+        if cached is not None:
+            return cached
+
         result = await session.execute(
             select(ChatMemberModel).where(ChatMemberModel.chat_id == chat_id)
         )
-        return [self._row_to_member(row) for row in result.scalars().all()]
+        members = [self._row_to_member(row) for row in result.scalars().all()]
+        await self._cache_members(chat_id, members)
+        return members
 
     async def list_my_chats(self, session: AsyncSession, user_id: str) -> list[Chat]:
-        """Fetch every chat the given user is a member of."""
+        """Fetch every chat the given user is a member of. Reads Redis before Postgres."""
+        cached = await self._get_cached_user_chats(user_id)
+        if cached is not None:
+            return cached
+
         result = await session.execute(
             select(ChatModel)
             .join(ChatMemberModel, ChatMemberModel.chat_id == ChatModel.chat_id)
             .where(ChatMemberModel.user_id == user_id)
         )
-        return [self._row_to_chat(row) for row in result.scalars().all()]
+        chats = [self._row_to_chat(row) for row in result.scalars().all()]
+        await self._cache_user_chats(user_id, chats)
+        return chats
 
     async def _get_direct_chat_by_pair(
         self, session: AsyncSession, user_min: str, user_max: str
