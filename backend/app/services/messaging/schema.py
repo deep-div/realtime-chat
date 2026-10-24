@@ -7,9 +7,9 @@ from pydantic import BaseModel
 class MessageStatus(str, Enum):
     """A recipient's delivery state for one message."""
 
-    SENT = "sent"
-    DELIVERED = "delivered"
-    READ = "read"
+    SENT = "sent"  # single tick: stored in DB, not yet delivered to any recipient device
+    DELIVERED = "delivered"  # grey double tick: reached at least one recipient device, unread
+    READ = "read"  # blue double tick: recipient opened and viewed the message
 
 
 class EncryptedContent(BaseModel):
