@@ -30,5 +30,6 @@ class User(BaseModel):
     display_name: str
     bio: str | None = None
     status: str | None = None
+    avatar_url: str | None = None
     created_at: int
     updated_at: int

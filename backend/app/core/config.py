@@ -18,6 +18,10 @@ class Settings(BaseSettings):
     DB_USER: str
     DB_PASSWORD: str
 
+    STORAGE_URL: str
+    STORAGE_KEY: str
+    STORAGE_AVATAR_BUCKET: str = "avatars"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

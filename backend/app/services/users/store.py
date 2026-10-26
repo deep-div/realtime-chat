@@ -93,6 +93,22 @@ class UserStore:
         await self._cache_profile(user)
         return user
 
+    async def update_avatar(
+        self, session: AsyncSession, user_id: str, avatar_url: str
+    ) -> User:
+        """Set a user's avatar_url. Raises if the user has no profile yet."""
+        row = await session.get(UserModel, user_id)
+        if row is None:
+            raise ProfileNotFoundError(user_id)
+
+        row.avatar_url = avatar_url
+        row.updated_at = int(time.time() * 1000)
+        await session.commit()
+
+        user = self._row_to_user(row)
+        await self._cache_profile(user)
+        return user
+
     async def search_users(
         self, session: AsyncSession, query: str, exclude_user_id: str, limit: int = 20
     ) -> list[User]:
@@ -112,6 +128,7 @@ class UserStore:
             display_name=row.display_name,
             bio=row.bio,
             status=row.status,
+            avatar_url=row.avatar_url,
             created_at=row.created_at,
             updated_at=row.updated_at,
         )
@@ -123,6 +140,10 @@ class ProfileAlreadyExistsError(Exception):
 
 class UsernameTakenError(Exception):
     """Raised when the requested username is already in use."""
+
+
+class ProfileNotFoundError(Exception):
+    """Raised when an operation targets a user with no profile yet."""
 
 
 user_store = UserStore()
