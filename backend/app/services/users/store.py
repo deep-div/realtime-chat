@@ -6,11 +6,49 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.clients.redis import redis_client
+from app.core.logging import logger
 from app.services.users.models import UserModel
 from app.services.users.schema import CreateProfile, User
 
+PROFILE_CACHE_PREFIX = "user:profile:"
+PROFILE_CACHE_TTL_SECONDS = 60 * 60 * 24
+
 
 class UserStore:
+
+    @staticmethod
+    def _profile_key(user_id: str) -> str:
+        """Build the Redis key caching one user's profile."""
+        return f"{PROFILE_CACHE_PREFIX}{user_id}"
+
+    async def _get_cached_profile(self, user_id: str) -> User | None:
+        """Read a user's profile from Redis. Postgres is the source of truth, so a
+        cache outage must degrade to a miss, never fail the caller."""
+        try:
+            raw = await redis_client.get(self._profile_key(user_id))
+        except Exception:
+            logger.warning("profile cache read failed, falling back to DB", exc_info=True)
+            return None
+        return User.model_validate_json(raw) if raw else None
+
+    async def _cache_profile(self, user: User) -> None:
+        """Best-effort write-through of a user's profile into Redis."""
+        try:
+            await redis_client.set(
+                self._profile_key(user.user_id),
+                user.model_dump_json(),
+                ex=PROFILE_CACHE_TTL_SECONDS,
+            )
+        except Exception:
+            logger.warning("profile cache write failed, DB row is still authoritative", exc_info=True)
+
+    async def _invalidate_profile_cache(self, user_id: str) -> None:
+        """Drop a user's cached profile after a write, so the next read refetches from DB."""
+        try:
+            await redis_client.delete(self._profile_key(user_id))
+        except Exception:
+            logger.warning("profile cache invalidation failed", exc_info=True)
 
     async def create_profile(
         self, session: AsyncSession, user_id: str, request: CreateProfile
@@ -37,14 +75,23 @@ class UserStore:
             await session.rollback()
             raise UsernameTakenError(request.username)
 
-        return self._row_to_user(row)
+        user = self._row_to_user(row)
+        await self._cache_profile(user)
+        return user
 
     async def get_profile(self, session: AsyncSession, user_id: str) -> User | None:
-        """Fetch a user's profile by id, or None if it doesn't exist."""
+        """Fetch a user's profile by id, or None if it doesn't exist. Reads Redis before Postgres."""
+        cached = await self._get_cached_profile(user_id)
+        if cached is not None:
+            return cached
+
         row = await session.get(UserModel, user_id)
         if row is None:
             return None
-        return self._row_to_user(row)
+
+        user = self._row_to_user(row)
+        await self._cache_profile(user)
+        return user
 
     async def search_users(
         self, session: AsyncSession, query: str, exclude_user_id: str, limit: int = 20
