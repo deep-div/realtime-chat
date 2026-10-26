@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.clients.postgre import get_db
 from app.clients.storage import upload_avatar
-from app.services.users.schema import CreateProfile, User
+from app.services.users.schema import CreateProfile, UpdateProfile, User
 from app.services.users.store import (
     ProfileAlreadyExistsError,
     ProfileNotFoundError,
@@ -47,6 +47,21 @@ async def get_my_profile(
     if profile is None:
         raise HTTPException(status_code=404, detail="profile not found")
     return profile
+
+
+@router.patch("/me", response_model=User)
+async def update_my_profile(
+    request: UpdateProfile,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> User:
+    """Update whichever profile fields are provided, leaving the rest unchanged."""
+    try:
+        return await user_store.update_profile(db, user_id, request)
+    except ProfileNotFoundError:
+        raise HTTPException(status_code=404, detail="profile not found")
+    except UsernameTakenError:
+        raise HTTPException(status_code=409, detail="username is already taken")
 
 
 @router.get("/search", response_model=list[User])

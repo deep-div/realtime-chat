@@ -22,6 +22,25 @@ class CreateProfile(BaseModel):
         return value.lower()
 
 
+class UpdateProfile(BaseModel):
+    """Request body for PATCH /users/me: only the fields present are updated."""
+
+    username: str | None = Field(default=None, min_length=3, max_length=20)
+    display_name: str | None = Field(default=None, min_length=1, max_length=50)
+    bio: str | None = Field(default=None, max_length=150)
+    status: str | None = Field(default=None, max_length=50)
+
+    @field_validator("username")
+    @classmethod
+    def validate_username(cls, value: str | None) -> str | None:
+        """Reject usernames with characters outside letters, digits, underscore, and dot."""
+        if value is None:
+            return value
+        if not USERNAME_PATTERN.match(value):
+            raise ValueError("username may only contain letters, numbers, '_' and '.'")
+        return value.lower()
+
+
 class User(BaseModel):
     """A user's profile, as returned to clients."""
 

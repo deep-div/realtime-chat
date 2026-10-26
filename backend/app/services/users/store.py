@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.clients.redis import redis_client
 from app.core.logging import logger
 from app.services.users.models import UserModel
-from app.services.users.schema import CreateProfile, User
+from app.services.users.schema import CreateProfile, UpdateProfile, User
 
 PROFILE_CACHE_PREFIX = "user:profile:"
 PROFILE_CACHE_TTL_SECONDS = 60 * 60 * 24
@@ -104,6 +104,29 @@ class UserStore:
         row.avatar_url = avatar_url
         row.updated_at = int(time.time() * 1000)
         await session.commit()
+
+        user = self._row_to_user(row)
+        await self._cache_profile(user)
+        return user
+
+    async def update_profile(
+        self, session: AsyncSession, user_id: str, request: UpdateProfile
+    ) -> User:
+        """Update whichever fields are set on the request, leaving the rest untouched."""
+        row = await session.get(UserModel, user_id)
+        if row is None:
+            raise ProfileNotFoundError(user_id)
+
+        updates = request.model_dump(exclude_unset=True, exclude_none=True)
+        for field, value in updates.items():
+            setattr(row, field, value)
+        row.updated_at = int(time.time() * 1000)
+
+        try:
+            await session.commit()
+        except IntegrityError:
+            await session.rollback()
+            raise UsernameTakenError(request.username)
 
         user = self._row_to_user(row)
         await self._cache_profile(user)
