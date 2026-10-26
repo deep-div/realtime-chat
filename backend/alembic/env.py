@@ -8,6 +8,7 @@ from alembic import context
 from app.clients.postgre import Base
 from app.core.config import settings
 from app.services.presence.models import LastSeen  
+from app.services.users.models import UserModel
 from app.services.chat.models import ChatMemberModel, ChatModel  
 from app.services.messaging.models import MessageModel, MessageReceiptModel
 

@@ -1,0 +1,34 @@
+import re
+
+from pydantic import BaseModel, Field, field_validator
+
+USERNAME_PATTERN = re.compile(r"^[a-zA-Z0-9_.]+$")
+
+
+class CreateProfile(BaseModel):
+    """Request body for POST /users/me: the username and display name a new user picks."""
+
+    username: str = Field(min_length=3, max_length=20)
+    display_name: str = Field(min_length=1, max_length=50)
+    bio: str | None = Field(default=None, max_length=150)
+    status: str | None = Field(default=None, max_length=50)
+
+    @field_validator("username")
+    @classmethod
+    def validate_username(cls, value: str) -> str:
+        """Reject usernames with characters outside letters, digits, underscore, and dot."""
+        if not USERNAME_PATTERN.match(value):
+            raise ValueError("username may only contain letters, numbers, '_' and '.'")
+        return value.lower()
+
+
+class User(BaseModel):
+    """A user's profile, as returned to clients."""
+
+    user_id: str
+    username: str
+    display_name: str
+    bio: str | None = None
+    status: str | None = None
+    created_at: int
+    updated_at: int
