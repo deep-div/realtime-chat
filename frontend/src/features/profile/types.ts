@@ -15,3 +15,10 @@ export interface CreateProfileInput {
   bio?: string;
   status?: string;
 }
+
+export interface UpdateProfileInput {
+  username?: string;
+  display_name?: string;
+  bio?: string;
+  status?: string;
+}

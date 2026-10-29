@@ -1,5 +1,5 @@
 import { ApiError, apiFetch } from "../../lib/api/client";
-import type { CreateProfileInput, Profile } from "./types";
+import type { CreateProfileInput, Profile, UpdateProfileInput } from "./types";
 
 /** Fetches the current user's backend profile, or null if they haven't completed it yet. */
 export async function getMyProfile(): Promise<Profile | null> {
@@ -16,6 +16,13 @@ export async function getMyProfile(): Promise<Profile | null> {
 export async function createMyProfile(input: CreateProfileInput): Promise<Profile> {
   return apiFetch<Profile>("/users/me", {
     method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function updateMyProfile(input: UpdateProfileInput): Promise<Profile> {
+  return apiFetch<Profile>("/users/me", {
+    method: "PATCH",
     body: JSON.stringify(input),
   });
 }

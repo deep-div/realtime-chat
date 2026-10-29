@@ -1,9 +1,9 @@
 import { type ChangeEvent, type FormEvent, useRef, useState } from "react";
+import { Avatar } from "../../../components/ui/Avatar";
 import { Button } from "../../../components/ui/Button";
 import { CameraIcon } from "../../../components/ui/CameraIcon";
 import { Input } from "../../../components/ui/Input";
 import { ApiError } from "../../../lib/api/client";
-import { getAvatarColor } from "../../../lib/avatarColor";
 import { useAuth } from "../../auth/hooks/useAuth";
 import { createMyProfile, uploadMyAvatar } from "../api";
 
@@ -11,8 +11,7 @@ const MAX_AVATAR_SIZE_BYTES = 5 * 1024 * 1024;
 
 export function CompleteProfileForm() {
   const { user, refreshProfile } = useAuth();
-  const emailInitial = user?.email?.trim().charAt(0).toUpperCase() ?? "?";
-  const avatarColor = getAvatarColor(user?.uid ?? emailInitial);
+  const emailLabel = user?.email ?? "?";
   const [username, setUsername] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
@@ -77,23 +76,12 @@ export function CompleteProfileForm() {
         </div>
 
         <div className="relative">
-          <div
-            className={`flex h-28 w-28 items-center justify-center overflow-hidden rounded-full ring-4 ring-surface shadow-lg shadow-primary/10 ${
-              avatarPreview ? "bg-surface-muted" : avatarColor
-            }`}
-          >
-            {avatarPreview ? (
-              <img
-                src={avatarPreview}
-                alt="Avatar preview"
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <span className="text-4xl font-semibold text-white">
-                {emailInitial}
-              </span>
-            )}
-          </div>
+          <Avatar
+            src={avatarPreview}
+            label={emailLabel}
+            className="h-28 w-28 ring-4 ring-surface shadow-lg shadow-primary/10"
+            textClassName="text-4xl"
+          />
           <button
             type="button"
             aria-label="Upload avatar"
