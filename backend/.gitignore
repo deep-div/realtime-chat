@@ -54,7 +54,7 @@ cover/
 
 # Firebase service account credentials
 secrets/
-
+scripts/
 
 # Translations
 *.mo
