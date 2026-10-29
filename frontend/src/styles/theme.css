@@ -1,0 +1,20 @@
+/*
+ * App theme tokens.
+ * Change the values in this block to re-theme the entire app at once —
+ * every `bg-primary`, `text-primary`, `border-primary`, etc. utility
+ * reads from these CSS variables, so a single edit here updates every
+ * screen that uses the primary color.
+ */
+@theme {
+  --color-primary: #655cf3;
+  --color-primary-hover: #5348e8;
+  --color-primary-soft: #eef0fe;
+  --color-primary-foreground: #ffffff;
+
+  --color-surface: #ffffff;
+  --color-surface-muted: #f6f6fb;
+  --color-border: #e7e6ef;
+
+  --color-ink: #16152b;
+  --color-ink-muted: #8b89a0;
+}
