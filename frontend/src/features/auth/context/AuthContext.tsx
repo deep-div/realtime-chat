@@ -16,6 +16,8 @@ import {
   signOut as firebaseSignOut,
 } from "firebase/auth";
 import { firebaseAuth, googleAuthProvider } from "../../../lib/firebase/config";
+import { getMyProfile } from "../../profile/api";
+import type { Profile } from "../../profile/types";
 import type { AuthContextValue, AuthUser } from "../types";
 
 export const AuthContext = createContext<AuthContextValue | null>(null);
@@ -38,6 +40,8 @@ function toAuthUser(firebaseUser: FirebaseUser | null): AuthUser | null {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [isProfileLoading, setIsProfileLoading] = useState(false);
   const suppressAuthEventsRef = useRef(false);
 
   useEffect(() => {
@@ -49,6 +53,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return unsubscribe;
   }, []);
+
+  useEffect(() => {
+    if (!user || !user.emailVerified) {
+      setProfile(null);
+      setIsProfileLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setIsProfileLoading(true);
+    getMyProfile()
+      .then((fetched) => {
+        if (!cancelled) setProfile(fetched);
+      })
+      .finally(() => {
+        if (!cancelled) setIsProfileLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+  async function refreshProfile() {
+    if (!user || !user.emailVerified) return;
+    setIsProfileLoading(true);
+    try {
+      setProfile(await getMyProfile());
+    } finally {
+      setIsProfileLoading(false);
+    }
+  }
 
   // Some flows (verify-before-login) sign the user in and back out again as
   // an implementation detail. Suppress onAuthStateChanged while that's
@@ -66,6 +102,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       user,
       isLoading,
+      profile,
+      isProfileLoading,
+      refreshProfile,
       signInWithGoogle: async () => {
         await signInWithPopup(firebaseAuth, googleAuthProvider);
       },
@@ -113,7 +152,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await firebaseSignOut(firebaseAuth);
       },
     }),
-    [user, isLoading],
+    [user, isLoading, profile, isProfileLoading],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
