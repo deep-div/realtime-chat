@@ -90,3 +90,15 @@ async def upload_my_avatar(
         return await user_store.update_avatar(db, user_id, avatar_url)
     except ProfileNotFoundError:
         raise HTTPException(status_code=404, detail="profile not found")
+
+
+@router.delete("/me/avatar", response_model=User)
+async def remove_my_avatar(
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> User:
+    """Clear the requesting user's avatar, falling back to the initials placeholder."""
+    try:
+        return await user_store.update_avatar(db, user_id, None)
+    except ProfileNotFoundError:
+        raise HTTPException(status_code=404, detail="profile not found")

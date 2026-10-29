@@ -94,7 +94,7 @@ class UserStore:
         return user
 
     async def update_avatar(
-        self, session: AsyncSession, user_id: str, avatar_url: str
+        self, session: AsyncSession, user_id: str, avatar_url: str | None
     ) -> User:
         """Set a user's avatar_url. Raises if the user has no profile yet."""
         row = await session.get(UserModel, user_id)

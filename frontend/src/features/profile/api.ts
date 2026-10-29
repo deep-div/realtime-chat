@@ -40,3 +40,9 @@ export async function uploadMyAvatar(file: File): Promise<Profile> {
     body: formData,
   });
 }
+
+export async function removeMyAvatar(): Promise<Profile> {
+  return apiFetch<Profile>("/users/me/avatar", {
+    method: "DELETE",
+  });
+}

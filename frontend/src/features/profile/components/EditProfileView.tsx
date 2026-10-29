@@ -1,13 +1,12 @@
-import { type ChangeEvent, type FormEvent, useRef, useState } from "react";
+import { type ChangeEvent, type FormEvent, useEffect, useRef, useState } from "react";
 import { ArrowLeftIcon } from "../../../components/ui/ArrowLeftIcon";
 import { Avatar } from "../../../components/ui/Avatar";
 import { Button } from "../../../components/ui/Button";
-import { CameraIcon } from "../../../components/ui/CameraIcon";
 import { Input } from "../../../components/ui/Input";
 import { LogOutIcon } from "../../../components/ui/LogOutIcon";
 import { ApiError } from "../../../lib/api/client";
 import { useAuth } from "../../auth/hooks/useAuth";
-import { updateMyProfile, uploadMyAvatar } from "../api";
+import { removeMyAvatar, updateMyProfile, uploadMyAvatar } from "../api";
 
 const MAX_AVATAR_SIZE_BYTES = 5 * 1024 * 1024;
 
@@ -25,11 +24,51 @@ export function EditProfileView({ onBack }: EditProfileViewProps) {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRemovingAvatar, setIsRemovingAvatar] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isAvatarMenuOpen, setIsAvatarMenuOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const avatarMenuRef = useRef<HTMLDivElement>(null);
 
   const avatarLabel = displayName || username || "?";
   const avatarSrc = avatarPreview ?? profile?.avatar_url ?? null;
+
+  useEffect(() => {
+    if (!isAvatarMenuOpen) return;
+    function handleClickOutside(event: MouseEvent) {
+      if (!avatarMenuRef.current?.contains(event.target as Node)) {
+        setIsAvatarMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isAvatarMenuOpen]);
+
+  async function handleRemoveAvatar() {
+    setIsAvatarMenuOpen(false);
+    setError(null);
+    setAvatarFile(null);
+    setAvatarPreview((previous) => {
+      if (previous) URL.revokeObjectURL(previous);
+      return null;
+    });
+    if (fileInputRef.current) fileInputRef.current.value = "";
+
+    if (!profile?.avatar_url) return;
+    setIsRemovingAvatar(true);
+    try {
+      await removeMyAvatar();
+      await refreshProfile();
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError(err.message);
+      } else {
+        setError("Could not remove photo. Please try again.");
+      }
+    } finally {
+      setIsRemovingAvatar(false);
+    }
+  }
 
   function handleAvatarChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -101,21 +140,46 @@ export function EditProfileView({ onBack }: EditProfileViewProps) {
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto scrollbar-hide">
         <form className="flex flex-col gap-5 px-5 py-6" onSubmit={handleSubmit}>
           <div className="flex flex-col items-center gap-4 pb-2">
-            <div className="relative">
-              <Avatar
-                src={avatarSrc}
-                label={avatarLabel}
-                className="h-28 w-28 ring-4 ring-surface shadow-xl shadow-primary/15"
-                textClassName="text-4xl"
-              />
+            <div className="relative" ref={avatarMenuRef}>
               <button
                 type="button"
-                aria-label="Change avatar"
-                onClick={() => fileInputRef.current?.click()}
-                className="absolute bottom-0 right-0 flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md shadow-primary/40 ring-2 ring-surface transition-transform hover:scale-105 active:scale-95"
+                aria-label="Edit photo"
+                onClick={() => setIsAvatarMenuOpen((open) => !open)}
+                className="block rounded-full transition-opacity hover:opacity-90"
               >
-                <CameraIcon className="h-4.5 w-4.5" />
+                <Avatar
+                  src={avatarSrc}
+                  label={avatarLabel}
+                  className="h-28 w-28 ring-4 ring-surface shadow-xl shadow-primary/15"
+                  textClassName="text-4xl"
+                />
               </button>
+
+              {isAvatarMenuOpen && (
+                <div className="absolute left-1/2 top-full z-10 mt-2 w-44 -translate-x-1/2 overflow-hidden rounded-xl bg-surface py-1 shadow-lg ring-1 ring-border">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsAvatarMenuOpen(false);
+                      fileInputRef.current?.click();
+                    }}
+                    className="block w-full px-4 py-2.5 text-left text-sm font-medium text-ink hover:bg-surface-muted"
+                  >
+                    Upload photo
+                  </button>
+                  {avatarSrc && (
+                    <button
+                      type="button"
+                      onClick={() => void handleRemoveAvatar()}
+                      disabled={isRemovingAvatar}
+                      className="block w-full px-4 py-2.5 text-left text-sm font-medium text-red-500 hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {isRemovingAvatar ? "Removing…" : "Remove photo"}
+                    </button>
+                  )}
+                </div>
+              )}
+
               <input
                 ref={fileInputRef}
                 type="file"
