@@ -141,7 +141,7 @@ export function ChatView() {
               if (event.key === "Enter") handleSend();
             }}
             placeholder="Type a message..."
-            className="w-full rounded-full bg-[#ffffff] py-2.5 pl-4 pr-11 text-sm text-ink placeholder:text-ink-muted focus:outline-none"
+            className="w-full rounded-full bg-[#ffffff] py-3.5 pl-4 pr-11 text-sm text-ink placeholder:text-ink-muted focus:outline-none"
           />
           {draft.trim() && (
             <button
