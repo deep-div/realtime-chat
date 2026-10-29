@@ -11,14 +11,22 @@ import { ChatBubbleIcon } from "../ui/ChatBubbleIcon";
 import { SearchIcon } from "../ui/SearchIcon";
 import { Skeleton } from "../ui/Skeleton";
 import { UserIcon } from "../ui/UserIcon";
+import person1 from "../../assests/person1.png";
+import person2 from "../../assests/person2.png";
+import person3 from "../../assests/person3.png";
+import person4 from "../../assests/person4.png";
+import person5 from "../../assests/person5.png";
+import person6 from "../../assests/person6.png";
+import person7 from "../../assests/person7.png";
 
 const SUGGESTED_PEOPLE = [
-  { name: "Ava Thompson", username: "avat" },
-  { name: "Liam Carter", username: "liamc" },
-  { name: "Noah Patel", username: "noahp" },
-  { name: "Maya Chen", username: "mayac" },
-  { name: "Ethan Brooks", username: "ethanb" },
-  { name: "Zara Malik", username: "zaram" },
+  { name: "Ava Thompson", username: "avat", avatar: person1 },
+  { name: "Liam Carter", username: "liamc", avatar: person2 },
+  { name: "Noah Patel", username: "noahp", avatar: person3 },
+  { name: "Maya Chen", username: "mayac", avatar: person4 },
+  { name: "Ethan Brooks", username: "ethanb", avatar: person5 },
+  { name: "Zara Malik", username: "zaram", avatar: person6 },
+  { name: "Aarav Mehta", username: "aaravm", avatar: person7 },
 ];
 
 function ChatListSkeleton() {
@@ -100,7 +108,7 @@ export function Sidebar() {
               onClick={() => setShowSignIn(true)}
               className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-surface-muted"
             >
-              <Avatar label={person.name} className="h-11 w-11 shrink-0" />
+              <Avatar src={person.avatar} label={person.name} className="h-11 w-11 shrink-0" />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-ink">{person.name}</p>
                 <p className="truncate text-xs text-ink-muted">@{person.username}</p>
