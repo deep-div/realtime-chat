@@ -5,7 +5,6 @@ import { EditProfileView } from "../../features/profile/components/EditProfileVi
 import { searchUsers } from "../../features/profile/api";
 import type { Profile } from "../../features/profile/types";
 import { Avatar } from "../ui/Avatar";
-import { ChatBubbleIcon } from "../ui/ChatBubbleIcon";
 import { SearchIcon } from "../ui/SearchIcon";
 import { Skeleton } from "../ui/Skeleton";
 
@@ -64,32 +63,9 @@ export function Sidebar() {
         <EditProfileView onBack={() => setIsEditingProfile(false)} />
       ) : (
         <>
-          <div className="flex items-center justify-between px-5 pt-5">
-            <div className="flex items-center gap-2">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-                <ChatBubbleIcon className="h-5 w-5" />
-              </span>
-              <span className="text-lg font-bold text-ink">messenger</span>
-            </div>
-            {profile && (
-              <button
-                type="button"
-                aria-label="Profile"
-                onClick={() => setIsEditingProfile(true)}
-                className="rounded-full ring-1 ring-border transition-opacity hover:opacity-80"
-              >
-                <Avatar
-                  src={profile.avatar_url}
-                  label={profile.display_name}
-                  className="h-9 w-9"
-                />
-              </button>
-            )}
-          </div>
-
-          <div className="px-5 pt-4">
-            <div className="flex items-center gap-2 rounded-xl bg-surface-muted px-3 py-2.5">
-              <SearchIcon className="h-5 w-5 shrink-0 text-ink-muted" />
+          <div className="flex items-center gap-3 px-5 pt-5">
+            <div className="flex flex-1 items-center gap-2.5 rounded-full bg-surface-muted px-4 py-2.5 ring-1 ring-transparent transition-shadow focus-within:ring-primary/30">
+              <SearchIcon className="h-4.5 w-4.5 shrink-0 text-ink-muted" />
               <input
                 type="text"
                 value={query}
@@ -98,6 +74,20 @@ export function Sidebar() {
                 className="w-full bg-transparent text-sm text-ink placeholder:text-ink-muted focus:outline-none"
               />
             </div>
+            {profile && (
+              <button
+                type="button"
+                aria-label="Profile"
+                onClick={() => setIsEditingProfile(true)}
+                className="shrink-0 rounded-full ring-2 ring-transparent transition-all hover:ring-primary/30"
+              >
+                <Avatar
+                  src={profile.avatar_url}
+                  label={profile.display_name}
+                  className="h-10 w-10"
+                />
+              </button>
+            )}
           </div>
 
           {query.trim() ? (
