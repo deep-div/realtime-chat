@@ -1,12 +1,25 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../../features/auth/hooks/useAuth";
+import { AuthModal } from "../../features/auth/components/AuthModal";
 import { useChat } from "../../features/chat/hooks/useChat";
 import { EditProfileView } from "../../features/profile/components/EditProfileView";
 import { searchUsers } from "../../features/profile/api";
 import type { Profile } from "../../features/profile/types";
 import { Avatar } from "../ui/Avatar";
+import { ArrowLeftIcon } from "../ui/ArrowLeftIcon";
+import { ChatBubbleIcon } from "../ui/ChatBubbleIcon";
 import { SearchIcon } from "../ui/SearchIcon";
 import { Skeleton } from "../ui/Skeleton";
+import { UserIcon } from "../ui/UserIcon";
+
+const SUGGESTED_PEOPLE = [
+  { name: "Ava Thompson", username: "avat" },
+  { name: "Liam Carter", username: "liamc" },
+  { name: "Noah Patel", username: "noahp" },
+  { name: "Maya Chen", username: "mayac" },
+  { name: "Ethan Brooks", username: "ethanb" },
+  { name: "Zara Malik", username: "zaram" },
+];
 
 function ChatListSkeleton() {
   return (
@@ -25,12 +38,13 @@ function ChatListSkeleton() {
 }
 
 export function Sidebar() {
-  const { profile } = useAuth();
+  const { user, profile } = useAuth();
   const { chats, isLoadingChats, activeChat, openChat, startDirectChat, presenceByUserId } = useChat();
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Profile[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [showSignIn, setShowSignIn] = useState(false);
 
   function handleSelectUser(user: Profile) {
     startDirectChat(user);
@@ -56,6 +70,71 @@ export function Sidebar() {
 
     return () => clearTimeout(timeoutId);
   }, [query]);
+
+  if (!user) {
+    return (
+      <aside className="relative hidden w-[360px] shrink-0 flex-col overflow-hidden border-r border-border bg-surface md:flex">
+        <div className="px-5 pt-6">
+          <h2 className="text-base font-semibold tracking-tight text-ink">
+            Suggested people
+          </h2>
+          <p className="mt-0.5 text-xs text-ink-muted">
+            Find interesting people to chat with
+          </p>
+        </div>
+
+        <div className="flex-1 space-y-0.5 overflow-y-auto px-2 pt-3">
+          {SUGGESTED_PEOPLE.map((person) => (
+            <div
+              key={person.username}
+              className="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-surface-muted"
+            >
+              <Avatar label={person.name} className="h-11 w-11 shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium text-ink">{person.name}</p>
+                <p className="truncate text-xs text-ink-muted">@{person.username}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowSignIn(true)}
+                className="flex shrink-0 items-center gap-1.5 rounded-lg bg-primary-soft px-3.5 py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary hover:text-primary-foreground"
+              >
+                <ChatBubbleIcon className="h-4 w-4" />
+                Message
+              </button>
+            </div>
+          ))}
+        </div>
+
+        <div className="border-t border-border p-3">
+          <button
+            type="button"
+            onClick={() => setShowSignIn(true)}
+            className="flex w-full items-center gap-3 rounded-2xl bg-surface-muted p-3 text-left transition-colors hover:bg-primary-soft"
+          >
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary-hover shadow-md shadow-primary/30">
+              <UserIcon className="h-5 w-5 text-primary-foreground" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-semibold text-ink">
+                Explore more people
+              </span>
+              <span className="block truncate text-xs text-ink-muted">
+                Discover new friends and communities
+              </span>
+            </span>
+            <ArrowLeftIcon className="h-4 w-4 shrink-0 rotate-180 text-ink-muted" />
+          </button>
+        </div>
+
+        <AuthModal
+          isOpen={showSignIn}
+          initialMode="sign-in"
+          onClose={() => setShowSignIn(false)}
+        />
+      </aside>
+    );
+  }
 
   return (
     <aside className="hidden w-[360px] shrink-0 flex-col border-r border-border bg-surface md:flex">
@@ -117,11 +196,7 @@ export function Sidebar() {
             <div className="flex-1 overflow-y-auto px-2 pt-2">
               {isLoadingChats ? (
                 <ChatListSkeleton />
-              ) : chats.length === 0 ? (
-                <p className="px-3 py-2 text-sm text-ink-muted">
-                  No conversations yet. Search for someone to start chatting.
-                </p>
-              ) : (
+              ) : chats.length === 0 ? null : (
                 chats.map((chat) => (
                   <button
                     key={chat.chat_id}
