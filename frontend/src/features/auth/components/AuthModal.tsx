@@ -12,6 +12,11 @@ interface AuthModalProps {
   onClose: () => void;
 }
 
+interface Feedback {
+  type: "error" | "info";
+  text: string;
+}
+
 const INCORRECT_CREDENTIALS = "Incorrect email or password.";
 
 const FRIENDLY_ERRORS: Record<string, string> = {
@@ -53,19 +58,15 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [verificationSent, setVerificationSent] = useState(false);
+  const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [needsVerification, setNeedsVerification] = useState(false);
-  const [resendStatus, setResendStatus] = useState<string | null>(null);
 
   const resetState = () => {
     setEmail("");
     setPassword("");
-    setError(null);
+    setFeedback(null);
     setIsSubmitting(false);
-    setVerificationSent(false);
     setNeedsVerification(false);
-    setResendStatus(null);
     setMode("sign-in");
   };
 
@@ -75,32 +76,40 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
   };
 
   const toggleMode = () => {
-    setError(null);
+    setFeedback(null);
+    setNeedsVerification(false);
     setMode((current) => (current === "sign-in" ? "sign-up" : "sign-in"));
   };
 
   const handleGoogleSignIn = async () => {
-    setError(null);
+    setFeedback(null);
     setIsSubmitting(true);
     try {
       await signInWithGoogle();
       handleClose();
     } catch (err) {
-      setError(getErrorMessage(err, "Something went wrong. Please try again."));
+      setFeedback({
+        type: "error",
+        text: getErrorMessage(err, "Something went wrong. Please try again."),
+      });
       setIsSubmitting(false);
     }
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setError(null);
+    setFeedback(null);
     setNeedsVerification(false);
-    setResendStatus(null);
     setIsSubmitting(true);
     try {
       if (mode === "sign-up") {
         await signUpWithEmail(email, password);
-        setVerificationSent(true);
+        setMode("sign-in");
+        setPassword("");
+        setFeedback({
+          type: "info",
+          text: "Please verify the link sent to your email.",
+        });
         setIsSubmitting(false);
       } else {
         await signInWithEmail(email, password);
@@ -111,41 +120,26 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
         mode === "sign-in"
           ? INCORRECT_CREDENTIALS
           : "Something went wrong. Please try again.";
-      setError(getErrorMessage(err, fallback));
+      setFeedback({ type: "error", text: getErrorMessage(err, fallback) });
       setNeedsVerification(hasErrorCode(err) && err.code === "auth/email-not-verified");
       setIsSubmitting(false);
     }
   };
 
   const handleResendVerification = async () => {
-    setResendStatus(null);
     setIsSubmitting(true);
     try {
       await resendVerificationEmail(email, password);
-      setResendStatus("Verification email sent. Check your inbox.");
+      setFeedback({ type: "info", text: "Verification email sent. Check your inbox." });
     } catch {
-      setResendStatus("Couldn't resend the email. Please try again.");
+      setFeedback({
+        type: "error",
+        text: "Couldn't resend the email. Please try again.",
+      });
     } finally {
       setIsSubmitting(false);
     }
   };
-
-  if (verificationSent) {
-    return (
-      <Modal isOpen={isOpen} onClose={handleClose}>
-        <div className="flex flex-col items-center gap-3 text-center">
-          <h2 className="text-lg font-semibold text-ink">Check your email</h2>
-          <p className="text-sm text-ink-muted">
-            We sent a verification link to <strong>{email}</strong>. Verify
-            your address, then sign in.
-          </p>
-          <Button onClick={handleClose} className="mt-2 w-full">
-            Got it
-          </Button>
-        </div>
-      </Modal>
-    );
-  }
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose}>
@@ -177,9 +171,13 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
             required
           />
 
-          {error && (
+          {feedback && (
             <div className="space-y-2">
-              <p className="text-sm text-red-500">{error}</p>
+              <p
+                className={`text-sm ${feedback.type === "error" ? "text-red-500" : "text-primary"}`}
+              >
+                {feedback.text}
+              </p>
               {needsVerification && (
                 <button
                   type="button"
@@ -189,9 +187,6 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
                 >
                   Resend verification email
                 </button>
-              )}
-              {resendStatus && (
-                <p className="text-sm text-ink-muted">{resendStatus}</p>
               )}
             </div>
           )}
