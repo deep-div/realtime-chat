@@ -1,3 +1,13 @@
+function Sparkle({ x, y, size, opacity = 0.8 }: { x: number; y: number; size: number; opacity?: number }) {
+  return (
+    <path
+      d={`M${x},${y - size} C${x + size * 0.15},${y - size * 0.15} ${x + size * 0.85},${y - size * 0.15} ${x + size},${y} C${x + size * 0.85},${y + size * 0.15} ${x + size * 0.15},${y + size * 0.15} ${x},${y + size} C${x - size * 0.15},${y + size * 0.15} ${x - size * 0.85},${y + size * 0.15} ${x - size},${y} C${x - size * 0.85},${y - size * 0.15} ${x - size * 0.15},${y - size * 0.15} ${x},${y - size} Z`}
+      fill="#8fb4f9"
+      opacity={opacity}
+    />
+  );
+}
+
 function ProfileCard({ x, y, width, height }: { x: number; y: number; width: number; height: number }) {
   const padding = height * 0.22;
   const avatarR = height * 0.28;
@@ -20,7 +30,7 @@ function ProfileCard({ x, y, width, height }: { x: number; y: number; width: num
 export function HeroIllustration() {
   return (
     <div className="relative h-64 w-[36rem]">
-      <svg viewBox="0 0 896 400" className="h-full w-full" aria-hidden="true">
+      <svg viewBox="60 20 776 360" className="h-full w-full" aria-hidden="true">
         <defs>
           <linearGradient id="bubbleGradient" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#5b93f5" />
@@ -45,6 +55,11 @@ export function HeroIllustration() {
           <mask id="sceneMask">
             <rect x="0" y="0" width="896" height="400" fill="url(#sceneFade)" />
           </mask>
+          <radialGradient id="glossGradient" cx="34%" cy="26%" r="55%">
+            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.55" />
+            <stop offset="55%" stopColor="#ffffff" stopOpacity="0.08" />
+            <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
+          </radialGradient>
         </defs>
 
         <g mask="url(#sceneMask)">
@@ -95,13 +110,18 @@ export function HeroIllustration() {
           <path d="M565,330 Q585,352 612,358 Q588,342 578,322 Z" fill="#ffffff" opacity="0.95" />
         </g>
 
-        <g filter="url(#bubbleShadow)">
+        <g filter="url(#bubbleShadow)" className="origin-center animate-[float_6s_ease-in-out_infinite]">
           <ellipse cx="428" cy="232" rx="128" ry="104" fill="url(#bubbleGradient)" />
           <path d="M350,312 Q335,344 305,354 Q340,340 354,316 Z" fill="url(#bubbleGradient)" />
+          <ellipse cx="428" cy="232" rx="128" ry="104" fill="url(#glossGradient)" />
           <circle cx="388" cy="234" r="12" fill="#ffffff" />
           <circle cx="428" cy="234" r="12" fill="#ffffff" />
           <circle cx="468" cy="234" r="12" fill="#ffffff" />
         </g>
+
+        <Sparkle x={826} y={78} size={9} />
+        <Sparkle x={136} y={118} size={6} opacity={0.6} />
+        <Sparkle x={58} y={388} size={7} opacity={0.65} />
 
         <g fill="#cfe0fb">
           <ellipse cx="520" cy="372" rx="11" ry="38" transform="rotate(-22 520 372)" />
