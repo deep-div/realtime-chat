@@ -7,10 +7,14 @@ export function AuthLanding() {
   const [authMode, setAuthMode] = useState<"sign-in" | "sign-up" | null>(null);
 
   return (
-    <div className="flex animate-[fade-in-up_0.6s_ease-out] flex-col items-center gap-3 px-6 text-center">
+    <div className="flex flex-col items-center gap-3 px-6 text-center">
       <HeroIllustration />
 
-      <div className="mt-5 flex flex-col items-center gap-3">
+      <h1 className="mt-2 text-2xl font-semibold tracking-tight text-ink">
+        Messenger
+      </h1>
+
+      <div className="mt-4 flex flex-col items-center gap-3">
         <Button onClick={() => setAuthMode("sign-in")} className="min-w-48">
           Sign in
         </Button>
