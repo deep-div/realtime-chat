@@ -96,7 +96,7 @@ export function Sidebar({ focusSearch = false }: SidebarProps) {
 
   if (!user) {
     return (
-      <aside className="relative hidden w-[360px] shrink-0 flex-col overflow-hidden border-r border-border bg-surface-cream md:flex">
+      <aside className="relative flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden">
         <div className="px-5 pt-6">
           <h2 className="text-base font-semibold tracking-tight text-ink">
             Suggested people
@@ -162,7 +162,7 @@ export function Sidebar({ focusSearch = false }: SidebarProps) {
   }
 
   return (
-    <aside className="hidden w-[360px] shrink-0 flex-col border-r border-border bg-surface-cream md:flex">
+    <aside className="flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden">
       <div className="flex items-center gap-3 px-5 pt-5">
         <div className="flex flex-1 items-center gap-2.5 rounded-full bg-surface-muted px-4 py-2.5 ring-1 ring-transparent transition-shadow focus-within:ring-primary/30">
           <SearchIcon className="h-4.5 w-4.5 shrink-0 text-ink-muted" />
