@@ -6,22 +6,16 @@ export function ChatBubbleIcon({ className }: ChatBubbleIconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
-      fill="none"
+      fill="currentColor"
+      fillRule="evenodd"
       className={className}
       aria-hidden="true"
     >
       <path
-        d="M4 12a8 8 0 1 1 3.2 6.4L4 19l1.1-3A7.96 7.96 0 0 1 4 12Z"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M8.5 10.5h7M8.5 13.5h4.5"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
+        d="M12 3C7.03 3 3 6.58 3 11c0 2.08 0.9 3.97 2.38 5.4L4 21l4.8-1.9C10 19.68 10.97 19 12 19c4.97 0 9-3.58 9-8s-4.03-8-9-8z
+           M6.9 11a1.1 1.1 0 1 0 2.2 0 1.1 1.1 0 1 0 -2.2 0Z
+           M10.9 11a1.1 1.1 0 1 0 2.2 0 1.1 1.1 0 1 0 -2.2 0Z
+           M14.9 11a1.1 1.1 0 1 0 2.2 0 1.1 1.1 0 1 0 -2.2 0Z"
       />
     </svg>
   );
