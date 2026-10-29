@@ -27,7 +27,7 @@ function ChatListSkeleton() {
 
 export function Sidebar() {
   const { profile } = useAuth();
-  const { chats, isLoadingChats, activeChat, openChat, startDirectChat } = useChat();
+  const { chats, isLoadingChats, activeChat, openChat, startDirectChat, presenceByUserId } = useChat();
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Profile[]>([]);
@@ -142,11 +142,16 @@ export function Sidebar() {
                       activeChat?.chatId === chat.chat_id ? "bg-surface-muted" : ""
                     }`}
                   >
-                    <Avatar
-                      src={chat.peer?.avatar_url}
-                      label={chat.peer?.display_name ?? "?"}
-                      className="h-10 w-10"
-                    />
+                    <div className="relative shrink-0">
+                      <Avatar
+                        src={chat.peer?.avatar_url}
+                        label={chat.peer?.display_name ?? "?"}
+                        className="h-10 w-10"
+                      />
+                      {chat.peer && presenceByUserId[chat.peer.user_id]?.status === "online" && (
+                        <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-surface bg-emerald-500" />
+                      )}
+                    </div>
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium text-ink">
                         {chat.peer?.display_name ?? "Unknown user"}

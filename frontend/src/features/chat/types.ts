@@ -44,3 +44,12 @@ export interface ActiveChat {
   chatId: string;
   peer: Profile;
 }
+
+export type PresenceStatus = "online" | "offline";
+
+export interface UserPresence {
+  user_id: string;
+  status: PresenceStatus;
+  last_seen: number | null;
+  updated_at: number;
+}

@@ -10,7 +10,7 @@ import { useAuth } from "../../auth/hooks/useAuth";
 import type { Profile } from "../../profile/types";
 import { createDirectChat, getChatMessages, listMyChats } from "../api";
 import { ChatSocket } from "../socket";
-import type { ActiveChat, ChatMessage, ChatSummary } from "../types";
+import type { ActiveChat, ChatMessage, ChatSummary, UserPresence } from "../types";
 
 /** No real end-to-end encryption yet - placeholder scheme until key exchange is designed. */
 const PLACEHOLDER_SCHEME = "plaintext-v0";
@@ -21,6 +21,7 @@ interface ChatContextValue {
   activeChat: ActiveChat | null;
   messages: ChatMessage[];
   isLoadingMessages: boolean;
+  presenceByUserId: Record<string, UserPresence>;
   openChat: (chat: ChatSummary) => Promise<void>;
   startDirectChat: (peer: Profile) => Promise<void>;
   sendMessage: (text: string) => void;
@@ -37,9 +38,11 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const [activeChat, setActiveChat] = useState<ActiveChat | null>(null);
   const [messagesByChatId, setMessagesByChatId] = useState<Record<string, ChatMessage[]>>({});
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  const [presenceByUserId, setPresenceByUserId] = useState<Record<string, UserPresence>>({});
   const socketRef = useRef<ChatSocket | null>(null);
   const activeChatRef = useRef<ActiveChat | null>(null);
   const ackedMessageIdsRef = useRef<Set<string>>(new Set());
+  const subscribedPeerIdsRef = useRef<Set<string>>(new Set());
 
   function setActiveChatAndRef(chat: ActiveChat | null) {
     activeChatRef.current = chat;
@@ -106,6 +109,13 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           return { ...prev, [chatId]: updated };
         });
       },
+      onPresence: (users) => {
+        setPresenceByUserId((prev) => {
+          const next = { ...prev };
+          for (const user of users) next[user.user_id] = user;
+          return next;
+        });
+      },
       onMessageError: ({ clientMessageId }) => {
         if (!clientMessageId) return;
         setMessagesByChatId((prev) => {
@@ -128,6 +138,25 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       socketRef.current = null;
     };
   }, [user, profile]);
+
+  useEffect(() => {
+    const peerIds = new Set<string>();
+    for (const chat of chats) if (chat.peer) peerIds.add(chat.peer.user_id);
+    if (activeChat) peerIds.add(activeChat.peer.user_id);
+
+    const previouslySubscribed = subscribedPeerIdsRef.current;
+    const added = [...peerIds].filter((id) => !previouslySubscribed.has(id));
+    const removed = [...previouslySubscribed].filter((id) => !peerIds.has(id));
+
+    if (added.length > 0) {
+      socketRef.current?.subscribePresence(added);
+      socketRef.current?.getPresence(added);
+    }
+    if (removed.length > 0) {
+      socketRef.current?.unsubscribePresence(removed);
+    }
+    subscribedPeerIdsRef.current = peerIds;
+  }, [chats, activeChat]);
 
   async function loadMessagesIfNeeded(chatId: string) {
     if (messagesByChatId[chatId]) {
@@ -207,11 +236,12 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       activeChat,
       messages: activeChat ? messagesByChatId[activeChat.chatId] ?? [] : [],
       isLoadingMessages,
+      presenceByUserId,
       openChat,
       startDirectChat,
       sendMessage,
     }),
-    [chats, isLoadingChats, activeChat, messagesByChatId, isLoadingMessages],
+    [chats, isLoadingChats, activeChat, messagesByChatId, isLoadingMessages, presenceByUserId],
   );
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;

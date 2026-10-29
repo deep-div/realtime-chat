@@ -1,10 +1,12 @@
 import { firebaseAuth } from "../../lib/firebase/config";
-import type { ChatMessage } from "./types";
+import type { ChatMessage, UserPresence } from "./types";
 
 const API_BASE_URL: string = import.meta.env.VITE_API_BASE_URL;
 
 type IncomingEvent =
   | { event: "new_message"; message: ChatMessage }
+  | { event: "presence"; users: UserPresence[] }
+  | { event: "presence_update"; users: UserPresence[] }
   | { type: "message_status"; message_id?: string; status: string; message?: ChatMessage }
   | { type: "handshake_ack"; connection_id: string }
   | { type: "message_error"; client_message_id?: string; message_id?: string; error: string };
@@ -13,6 +15,7 @@ export interface ChatSocketHandlers {
   onNewMessage: (message: ChatMessage) => void;
   onMessageStatus: (payload: { messageId?: string; status: string; message?: ChatMessage }) => void;
   onMessageError: (payload: { clientMessageId?: string; messageId?: string; error: string }) => void;
+  onPresence: (users: UserPresence[]) => void;
 }
 
 /** Thin wrapper around the app's single /ws connection: handshake, heartbeat, send/receive. */
@@ -21,6 +24,8 @@ export class ChatSocket {
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
   private readonly deviceId = crypto.randomUUID();
   private readonly sessionId = crypto.randomUUID();
+  private handshakeSent = false;
+  private sendQueue: string[] = [];
 
   constructor(private readonly handlers: ChatSocketHandlers) {}
 
@@ -43,6 +48,8 @@ export class ChatSocket {
           protocol_version: "1",
         }),
       );
+      this.handshakeSent = true;
+      this.flushQueue();
     };
 
     socket.onmessage = (event) => {
@@ -53,12 +60,17 @@ export class ChatSocket {
     socket.onclose = () => {
       this.stopHeartbeat();
       this.socket = null;
+      this.handshakeSent = false;
     };
   }
 
   private handleIncoming(payload: IncomingEvent) {
     if ("event" in payload && payload.event === "new_message") {
       this.handlers.onNewMessage(payload.message);
+      return;
+    }
+    if ("event" in payload && (payload.event === "presence" || payload.event === "presence_update")) {
+      this.handlers.onPresence(payload.users);
       return;
     }
     if ("type" in payload && payload.type === "handshake_ack") {
@@ -82,6 +94,22 @@ export class ChatSocket {
     }
   }
 
+  private flushQueue() {
+    for (const payload of this.sendQueue) {
+      this.socket?.send(payload);
+    }
+    this.sendQueue = [];
+  }
+
+  private send(payload: object) {
+    const serialized = JSON.stringify(payload);
+    if (this.handshakeSent) {
+      this.socket?.send(serialized);
+    } else {
+      this.sendQueue.push(serialized);
+    }
+  }
+
   private startHeartbeat() {
     this.heartbeatTimer = setInterval(() => {
       this.socket?.send(JSON.stringify({ type: "heartbeat" }));
@@ -94,20 +122,31 @@ export class ChatSocket {
   }
 
   sendMessage(chatId: string, clientMessageId: string, ciphertext: string, scheme: string) {
-    this.socket?.send(
-      JSON.stringify({
-        type: "send_message",
-        client_message_id: clientMessageId,
-        chat_id: chatId,
-        content: { scheme, ciphertext },
-      }),
-    );
+    this.send({
+      type: "send_message",
+      client_message_id: clientMessageId,
+      chat_id: chatId,
+      content: { scheme, ciphertext },
+    });
   }
 
   ackRead(chatId: string, messageId: string) {
-    this.socket?.send(
-      JSON.stringify({ type: "message_ack", chat_id: chatId, message_id: messageId, status: "read" }),
-    );
+    this.send({ type: "message_ack", chat_id: chatId, message_id: messageId, status: "read" });
+  }
+
+  getPresence(userIds: string[]) {
+    if (userIds.length === 0) return;
+    this.send({ type: "get_presence", user_ids: userIds });
+  }
+
+  subscribePresence(userIds: string[]) {
+    if (userIds.length === 0) return;
+    this.send({ type: "subscribe_presence", user_ids: userIds });
+  }
+
+  unsubscribePresence(userIds: string[]) {
+    if (userIds.length === 0) return;
+    this.send({ type: "unsubscribe_presence", user_ids: userIds });
   }
 
   disconnect() {

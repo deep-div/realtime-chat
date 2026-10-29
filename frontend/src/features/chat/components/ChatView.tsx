@@ -19,12 +19,27 @@ function MessagesSkeleton() {
   );
 }
 
+function formatLastSeen(lastSeen: number | null): string {
+  if (!lastSeen) return "offline";
+  const diffMs = Date.now() - lastSeen;
+  const minutes = Math.floor(diffMs / 60000);
+  if (minutes < 1) return "last seen just now";
+  if (minutes < 60) return `last seen ${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `last seen ${hours}h ago`;
+  return `last seen ${new Date(lastSeen).toLocaleDateString()}`;
+}
+
 export function ChatView() {
   const { profile } = useAuth();
-  const { activeChat, messages, isLoadingMessages, sendMessage } = useChat();
+  const { activeChat, messages, isLoadingMessages, sendMessage, presenceByUserId } = useChat();
   const [draft, setDraft] = useState("");
 
   if (!activeChat) return null;
+
+  const presence = presenceByUserId[activeChat.peer.user_id];
+  const statusLine =
+    presence?.status === "online" ? "Online" : formatLastSeen(presence?.last_seen ?? null);
 
   function handleSend() {
     sendMessage(draft);
@@ -34,14 +49,21 @@ export function ChatView() {
   return (
     <div className="flex h-full w-full flex-col">
       <div className="flex items-center gap-3 border-b border-border px-5 py-4">
-        <Avatar
-          src={activeChat.peer.avatar_url}
-          label={activeChat.peer.display_name}
-          className="h-9 w-9"
-        />
+        <div className="relative shrink-0">
+          <Avatar
+            src={activeChat.peer.avatar_url}
+            label={activeChat.peer.display_name}
+            className="h-9 w-9"
+          />
+          {presence?.status === "online" && (
+            <span className="absolute bottom-0 right-0 h-2 w-2 rounded-full border-2 border-surface bg-emerald-500" />
+          )}
+        </div>
         <div>
           <p className="text-sm font-semibold text-ink">{activeChat.peer.display_name}</p>
-          <p className="text-xs text-ink-muted">@{activeChat.peer.username}</p>
+          <p className={`text-xs ${presence?.status === "online" ? "text-emerald-600" : "text-ink-muted"}`}>
+            {statusLine}
+          </p>
         </div>
       </div>
 
