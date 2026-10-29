@@ -20,6 +20,7 @@ class Settings(BaseSettings):
 
     STORAGE_URL: str
     STORAGE_KEY: str
+    STORAGE_SERVICE_KEY: str
     STORAGE_AVATAR_BUCKET: str = "avatars"
 
     FIREBASE_CREDENTIALS_FILE: str
