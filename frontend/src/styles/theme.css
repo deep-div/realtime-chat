@@ -6,8 +6,8 @@
  * screen that uses the primary color.
  */
 @theme {
-  --color-primary: #2563eb;
-  --color-primary-hover: #1d4ed8;
+  --color-primary: #2e77fa;
+  --color-primary-hover: #1f63e0;
   --color-primary-soft: #eef3fe;
   --color-primary-foreground: #ffffff;
 
