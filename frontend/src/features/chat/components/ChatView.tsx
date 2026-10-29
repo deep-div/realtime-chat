@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ArrowLeftIcon } from "../../../components/ui/ArrowLeftIcon";
 import { Avatar } from "../../../components/ui/Avatar";
 import { MessageStatusTicks } from "../../../components/ui/MessageStatusTicks";
 import { PhoneIcon } from "../../../components/ui/PhoneIcon";
@@ -130,24 +131,29 @@ export function ChatView() {
         )}
       </div>
 
-      <div className="flex items-center gap-2 border-t border-border px-5 py-4">
-        <input
-          type="text"
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") handleSend();
-          }}
-          placeholder="Type a message..."
-          className="w-full rounded-full bg-surface-muted px-4 py-2.5 text-sm text-ink placeholder:text-ink-muted focus:outline-none"
-        />
-        <button
-          type="button"
-          onClick={handleSend}
-          className="rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground"
-        >
-          Send
-        </button>
+      <div className="flex items-center gap-2 bg-surface-gray px-5 py-4">
+        <div className="relative w-full">
+          <input
+            type="text"
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") handleSend();
+            }}
+            placeholder="Type a message..."
+            className="w-full rounded-full bg-[#ffffff] py-2.5 pl-4 pr-11 text-sm text-ink placeholder:text-ink-muted focus:outline-none"
+          />
+          {draft.trim() && (
+            <button
+              type="button"
+              aria-label="Send"
+              onClick={handleSend}
+              className="absolute right-1.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-primary text-primary-foreground transition-transform hover:scale-105 active:scale-95"
+            >
+              <ArrowLeftIcon className="h-4 w-4 rotate-180" />
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
