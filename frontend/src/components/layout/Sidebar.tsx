@@ -45,6 +45,12 @@ export function Sidebar() {
   const [results, setResults] = useState<Profile[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showSignIn, setShowSignIn] = useState(false);
+  const [isSuggestedLoading, setIsSuggestedLoading] = useState(true);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => setIsSuggestedLoading(false), 500);
+    return () => clearTimeout(timeoutId);
+  }, []);
 
   function handleSelectUser(user: Profile) {
     startDirectChat(user);
@@ -84,26 +90,28 @@ export function Sidebar() {
         </div>
 
         <div className="flex-1 space-y-0.5 overflow-y-auto px-2 pt-3">
-          {SUGGESTED_PEOPLE.map((person) => (
-            <div
+          {isSuggestedLoading ? (
+            <ChatListSkeleton />
+          ) : (
+          SUGGESTED_PEOPLE.map((person) => (
+            <button
               key={person.username}
-              className="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-surface-muted"
+              type="button"
+              onClick={() => setShowSignIn(true)}
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-surface-muted"
             >
               <Avatar label={person.name} className="h-11 w-11 shrink-0" />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-ink">{person.name}</p>
                 <p className="truncate text-xs text-ink-muted">@{person.username}</p>
               </div>
-              <button
-                type="button"
-                onClick={() => setShowSignIn(true)}
-                className="flex shrink-0 items-center gap-1.5 rounded-lg bg-primary-soft px-3.5 py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary hover:text-primary-foreground"
-              >
+              <span className="flex shrink-0 items-center gap-1.5 rounded-lg bg-primary-soft px-3.5 py-2 text-xs font-semibold text-primary">
                 <ChatBubbleIcon className="h-4 w-4" />
                 Message
-              </button>
-            </div>
-          ))}
+              </span>
+            </button>
+          ))
+          )}
         </div>
 
         <div className="border-t border-border p-3">
