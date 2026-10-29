@@ -1,9 +1,35 @@
 import { useState } from "react";
 import { Avatar } from "../../../components/ui/Avatar";
 import { MessageStatusTicks } from "../../../components/ui/MessageStatusTicks";
+import { PhoneIcon } from "../../../components/ui/PhoneIcon";
+import { SearchIcon } from "../../../components/ui/SearchIcon";
 import { Skeleton } from "../../../components/ui/Skeleton";
+import { VideoIcon } from "../../../components/ui/VideoIcon";
 import { useAuth } from "../../auth/hooks/useAuth";
 import { useChat } from "../hooks/useChat";
+
+function ComingSoonIconButton({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="group relative">
+      <button
+        type="button"
+        aria-label={label}
+        className="flex h-9 w-9 items-center justify-center rounded-full text-ink transition-colors hover:bg-surface-muted"
+      >
+        {children}
+      </button>
+      <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-1.5 -translate-x-1/2 whitespace-nowrap rounded-md bg-ink px-2 py-1 text-[11px] font-medium text-white opacity-0 shadow-md transition-opacity duration-150 group-hover:opacity-100">
+        Coming soon
+      </span>
+    </div>
+  );
+}
 
 const SKELETON_BUBBLE_WIDTHS = ["w-40", "w-56", "w-32", "w-48"];
 
@@ -59,11 +85,22 @@ export function ChatView() {
             <span className="absolute bottom-0 right-0 h-2 w-2 rounded-full border-2 border-surface bg-emerald-500" />
           )}
         </div>
-        <div>
+        <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-ink">{activeChat.peer.display_name}</p>
           <p className={`text-xs ${presence?.status === "online" ? "text-emerald-600" : "text-ink-muted"}`}>
             {statusLine}
           </p>
+        </div>
+        <div className="flex shrink-0 items-center gap-1">
+          <ComingSoonIconButton label="Search in chat">
+            <SearchIcon className="h-4.5 w-4.5" />
+          </ComingSoonIconButton>
+          <ComingSoonIconButton label="Voice call">
+            <PhoneIcon className="h-4.5 w-4.5" />
+          </ComingSoonIconButton>
+          <ComingSoonIconButton label="Video call">
+            <VideoIcon className="h-4.5 w-4.5" />
+          </ComingSoonIconButton>
         </div>
       </div>
 
