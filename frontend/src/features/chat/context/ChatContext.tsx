@@ -166,8 +166,14 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     setIsLoadingMessages(true);
     try {
       const history = await getChatMessages(chatId);
-      setMessagesByChatId((prev) => ({ ...prev, [chatId]: history }));
-      ackIfActiveChat(chatId, history);
+      const historyIds = new Set(history.map((h) => h.message_id));
+      let merged = history;
+      setMessagesByChatId((prev) => {
+        const liveOnly = (prev[chatId] ?? []).filter((m) => !historyIds.has(m.message_id));
+        merged = [...history, ...liveOnly];
+        return { ...prev, [chatId]: merged };
+      });
+      ackIfActiveChat(chatId, merged);
     } finally {
       setIsLoadingMessages(false);
     }
