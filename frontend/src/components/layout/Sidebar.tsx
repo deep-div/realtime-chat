@@ -1,8 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "../../features/auth/hooks/useAuth";
 import { AuthModal } from "../../features/auth/components/AuthModal";
 import { useChat } from "../../features/chat/hooks/useChat";
-import { EditProfileView } from "../../features/profile/components/EditProfileView";
 import { searchUsers } from "../../features/profile/api";
 import type { Profile } from "../../features/profile/types";
 import { Avatar } from "../ui/Avatar";
@@ -45,20 +44,30 @@ function ChatListSkeleton() {
   );
 }
 
-export function Sidebar() {
-  const { user, profile } = useAuth();
+interface SidebarProps {
+  focusSearch?: boolean;
+}
+
+export function Sidebar({ focusSearch = false }: SidebarProps) {
+  const { user } = useAuth();
   const { chats, isLoadingChats, activeChat, openChat, startDirectChat, presenceByUserId } = useChat();
-  const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Profile[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showSignIn, setShowSignIn] = useState(false);
   const [isSuggestedLoading, setIsSuggestedLoading] = useState(true);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const timeoutId = setTimeout(() => setIsSuggestedLoading(false), 500);
     return () => clearTimeout(timeoutId);
   }, []);
+
+  useEffect(() => {
+    if (focusSearch) {
+      searchInputRef.current?.focus();
+    }
+  }, [focusSearch]);
 
   function handleSelectUser(user: Profile) {
     startDirectChat(user);
@@ -154,38 +163,21 @@ export function Sidebar() {
 
   return (
     <aside className="hidden w-[360px] shrink-0 flex-col border-r border-border bg-surface-cream md:flex">
-      {isEditingProfile ? (
-        <EditProfileView onBack={() => setIsEditingProfile(false)} />
-      ) : (
-        <>
-          <div className="flex items-center gap-3 px-5 pt-5">
-            <div className="flex flex-1 items-center gap-2.5 rounded-full bg-surface-muted px-4 py-2.5 ring-1 ring-transparent transition-shadow focus-within:ring-primary/30">
-              <SearchIcon className="h-4.5 w-4.5 shrink-0 text-ink-muted" />
-              <input
-                type="text"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search people..."
-                className="w-full bg-transparent text-sm text-ink placeholder:text-ink-muted focus:outline-none"
-              />
-            </div>
-            {profile && (
-              <button
-                type="button"
-                aria-label="Profile"
-                onClick={() => setIsEditingProfile(true)}
-                className="shrink-0 rounded-full ring-2 ring-transparent transition-all hover:ring-primary/30"
-              >
-                <Avatar
-                  src={profile.avatar_url}
-                  label={profile.display_name}
-                  className="h-10 w-10"
-                />
-              </button>
-            )}
-          </div>
+      <div className="flex items-center gap-3 px-5 pt-5">
+        <div className="flex flex-1 items-center gap-2.5 rounded-full bg-surface-muted px-4 py-2.5 ring-1 ring-transparent transition-shadow focus-within:ring-primary/30">
+          <SearchIcon className="h-4.5 w-4.5 shrink-0 text-ink-muted" />
+          <input
+            ref={searchInputRef}
+            type="text"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search people..."
+            className="w-full bg-transparent text-sm text-ink placeholder:text-ink-muted focus:outline-none"
+          />
+        </div>
+      </div>
 
-          {query.trim() ? (
+      {query.trim() ? (
             <div className="flex-1 overflow-y-auto px-2 pt-2">
               {isSearching ? (
                 <ChatListSkeleton />
@@ -246,8 +238,6 @@ export function Sidebar() {
               )}
             </div>
           )}
-        </>
-      )}
     </aside>
   );
 }
