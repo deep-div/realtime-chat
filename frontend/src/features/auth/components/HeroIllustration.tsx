@@ -29,11 +29,6 @@ export function HeroIllustration() {
           <filter id="soften" x="-50%" y="-50%" width="200%" height="200%">
             <feGaussianBlur stdDeviation="28" />
           </filter>
-          <radialGradient id="haloGradient" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.95" />
-            <stop offset="70%" stopColor="#ffffff" stopOpacity="0.7" />
-            <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
-          </radialGradient>
         </defs>
 
         <g filter="url(#soften)">
@@ -78,9 +73,9 @@ export function HeroIllustration() {
         <circle cx="610" cy="268" r="3.5" fill="#2563eb" />
         <ProfileCard x={650} y={278} width={190} height={56} />
 
-        <g>
-          <ellipse cx="520" cy="228" rx="130" ry="112" fill="url(#haloGradient)" />
-          <path d="M595,290 Q608,316 630,328 Q604,320 592,298 Z" fill="#ffffff" opacity="0.85" filter="url(#soften)" />
+        <g opacity="0.9">
+          <ellipse cx="520" cy="228" rx="100" ry="86" fill="#ffffff" />
+          <path d="M595,290 Q608,316 630,328 Q604,320 592,298 Z" fill="#ffffff" />
         </g>
 
         <g>
