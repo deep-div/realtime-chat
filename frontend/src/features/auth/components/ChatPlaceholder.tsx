@@ -9,9 +9,6 @@ export function ChatPlaceholder() {
       <h2 className="text-xl font-semibold text-ink">
         Select a chat to start messaging
       </h2>
-      <p className="max-w-xs text-sm text-ink-muted">
-        Choose a conversation from the list to pick up where you left off.
-      </p>
     </div>
   );
 }
