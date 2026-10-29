@@ -20,13 +20,13 @@ import person6 from "../../assests/person6.png";
 import person7 from "../../assests/person7.png";
 
 const SUGGESTED_PEOPLE = [
-  { name: "Ava Thompson", username: "avat", avatar: person1 },
+  { name: "Ananya Sharma", username: "ananyas", avatar: person1 },
   { name: "Liam Carter", username: "liamc", avatar: person2 },
-  { name: "Noah Patel", username: "noahp", avatar: person3 },
-  { name: "Maya Chen", username: "mayac", avatar: person4 },
-  { name: "Ethan Brooks", username: "ethanb", avatar: person5 },
-  { name: "Zara Malik", username: "zaram", avatar: person6 },
-  { name: "Aarav Mehta", username: "aaravm", avatar: person7 },
+  { name: "Priya Verma", username: "priyav", avatar: person3 },
+  { name: "Noah Williams", username: "noahw", avatar: person4 },
+  { name: "Sophia Kapoor", username: "sophiak", avatar: person5 },
+  { name: "Arjun Mehta", username: "arjunm", avatar: person6 },
+  { name: "Olivia Bennett", username: "oliviab", avatar: person7 },
 ];
 
 function ChatListSkeleton() {
