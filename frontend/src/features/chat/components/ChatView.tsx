@@ -93,13 +93,13 @@ export function ChatView() {
         </div>
         <div className="flex shrink-0 items-center gap-1">
           <ComingSoonIconButton label="Search in chat">
-            <SearchIcon className="h-4.5 w-4.5" />
+            <SearchIcon className="h-4.5 w-4.5 stroke-[2.5]" />
           </ComingSoonIconButton>
           <ComingSoonIconButton label="Voice call">
-            <PhoneIcon className="h-4.5 w-4.5" />
+            <PhoneIcon className="h-4.5 w-4.5 stroke-[2.5]" />
           </ComingSoonIconButton>
           <ComingSoonIconButton label="Video call">
-            <VideoIcon className="h-4.5 w-4.5" />
+            <VideoIcon className="h-4.5 w-4.5 stroke-[2.5]" />
           </ComingSoonIconButton>
         </div>
       </div>
