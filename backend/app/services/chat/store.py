@@ -3,13 +3,14 @@ from __future__ import annotations
 import time
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import exists, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.clients.redis import redis_client
 from app.core.logging import logger
 from app.services.chat.models import ChatMemberModel, ChatModel
+from app.services.messaging.models import MessageModel
 from app.services.chat.schema import (
     Chat,
     ChatCreated,
@@ -357,13 +358,18 @@ class ChatStore:
         """Fetch a page of the user's chats, newest-created first, paired with each direct
         chat's other member id.
 
+        Only chats with at least one sent message are included - a direct chat row is
+        created as soon as you open someone's profile to message them, but it shouldn't
+        show up in either side's chat list until a message actually goes out.
+
         Bypasses the list_my_chats cache since it needs the direct_user_min/max columns
         that cache doesn't store, and cursor pagination isn't worth caching.
         """
+        has_messages = exists().where(MessageModel.chat_id == ChatModel.chat_id)
         query = (
             select(ChatModel)
             .join(ChatMemberModel, ChatMemberModel.chat_id == ChatModel.chat_id)
-            .where(ChatMemberModel.user_id == user_id)
+            .where(ChatMemberModel.user_id == user_id, has_messages)
             .order_by(ChatModel.created_at.desc(), ChatModel.chat_id.desc())
             .limit(limit)
         )
