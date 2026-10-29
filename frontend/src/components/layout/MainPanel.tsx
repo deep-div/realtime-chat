@@ -21,7 +21,7 @@ export function MainPanel() {
 
   if (activeChat) {
     return (
-      <main className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-surface">
+      <main className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-gradient-to-br from-surface to-surface-muted/40">
         <ChatView />
       </main>
     );
