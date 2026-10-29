@@ -149,7 +149,7 @@ export function AuthModal({ isOpen, onClose, initialMode = "sign-in" }: AuthModa
     <Modal isOpen={isOpen} onClose={handleClose}>
       <div className="flex flex-col gap-5">
         <h2 className="text-center text-lg font-semibold text-ink">
-          {mode === "sign-in" ? "Sign in to Mingle" : "Create your account"}
+          {mode === "sign-in" ? "Sign in to Messenger" : "Create your account"}
         </h2>
 
         <form className="flex flex-col gap-4" onSubmit={handleSubmit}>

@@ -7,11 +7,13 @@ export function AuthLanding() {
   const [authMode, setAuthMode] = useState<"sign-in" | "sign-up" | null>(null);
 
   return (
-    <div className="flex flex-col items-center gap-8 px-6 text-center">
+    <div className="flex animate-[fade-in-up_0.6s_ease-out] flex-col items-center gap-3 px-6 text-center">
       <HeroIllustration />
 
-      <div className="flex flex-col items-center gap-3">
-        <Button onClick={() => setAuthMode("sign-in")}>Sign in</Button>
+      <div className="mt-5 flex flex-col items-center gap-3">
+        <Button onClick={() => setAuthMode("sign-in")} className="min-w-48">
+          Sign in
+        </Button>
         <p className="text-sm text-ink-muted">
           Don't have an account?{" "}
           <button
