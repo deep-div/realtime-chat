@@ -29,8 +29,22 @@ export function HeroIllustration() {
           <filter id="soften" x="-50%" y="-50%" width="200%" height="200%">
             <feGaussianBlur stdDeviation="28" />
           </filter>
+          <radialGradient id="haloGradient" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.95" />
+            <stop offset="70%" stopColor="#ffffff" stopOpacity="0.7" />
+            <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
+          </radialGradient>
+          <radialGradient id="sceneFade" cx="50%" cy="48%" r="62%">
+            <stop offset="0%" stopColor="#ffffff" stopOpacity="1" />
+            <stop offset="65%" stopColor="#ffffff" stopOpacity="1" />
+            <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
+          </radialGradient>
+          <mask id="sceneMask">
+            <rect x="0" y="0" width="896" height="400" fill="url(#sceneFade)" />
+          </mask>
         </defs>
 
+        <g mask="url(#sceneMask)">
         <g filter="url(#soften)">
           <circle cx="400" cy="175" r="135" fill="#dbe7fc" opacity="0.4" />
           <circle cx="490" cy="165" r="120" fill="#e5eefd" opacity="0.45" />
@@ -73,9 +87,9 @@ export function HeroIllustration() {
         <circle cx="610" cy="268" r="3.5" fill="#2563eb" />
         <ProfileCard x={650} y={278} width={190} height={56} />
 
-        <g opacity="0.9">
-          <ellipse cx="520" cy="228" rx="100" ry="86" fill="#ffffff" />
-          <path d="M595,290 Q608,316 630,328 Q604,320 592,298 Z" fill="#ffffff" />
+        <g>
+          <ellipse cx="520" cy="228" rx="130" ry="112" fill="url(#haloGradient)" />
+          <path d="M595,290 Q608,316 630,328 Q604,320 592,298 Z" fill="#ffffff" opacity="0.85" filter="url(#soften)" />
         </g>
 
         <g>
@@ -91,6 +105,7 @@ export function HeroIllustration() {
           <ellipse cx="548" cy="380" rx="11" ry="33" transform="rotate(18 548 380)" />
           <ellipse cx="80" cy="380" rx="11" ry="36" transform="rotate(20 80 380)" />
           <ellipse cx="52" cy="372" rx="11" ry="31" transform="rotate(-16 52 372)" />
+        </g>
         </g>
       </svg>
     </div>
