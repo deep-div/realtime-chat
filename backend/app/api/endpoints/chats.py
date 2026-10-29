@@ -1,9 +1,10 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.deps import get_current_user_id
 from app.clients.postgre import get_db
 from app.services.chat.schema import (
     AddMember,
@@ -23,11 +24,6 @@ from app.services.chat.store import (
 )
 
 router = APIRouter(prefix="/chats")
-
-
-def get_current_user_id(x_user_id: str = Header(alias="X-User-Id")) -> str:
-    """Resolve the requesting user's id. Stand-in until real session/token auth exists."""
-    return x_user_id
 
 
 @router.post("", response_model=ChatCreated, status_code=status.HTTP_201_CREATED)

@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Depends, File, Header, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.deps import get_current_user_id
 from app.clients.postgre import get_db
 from app.clients.storage import upload_avatar
 from app.services.users.schema import CreateProfile, UpdateProfile, User
@@ -15,11 +16,6 @@ router = APIRouter(prefix="/users")
 
 ALLOWED_AVATAR_TYPES = {"image/jpeg", "image/png", "image/webp"}
 MAX_AVATAR_SIZE_BYTES = 5 * 1024 * 1024
-
-
-def get_current_user_id(x_user_id: str = Header(alias="X-User-Id")) -> str:
-    """Resolve the requesting user's id. Stand-in until real Firebase token auth exists."""
-    return x_user_id
 
 
 @router.post("/me", response_model=User, status_code=status.HTTP_201_CREATED)

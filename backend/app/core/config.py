@@ -22,6 +22,10 @@ class Settings(BaseSettings):
     STORAGE_KEY: str
     STORAGE_AVATAR_BUCKET: str = "avatars"
 
+    FIREBASE_CREDENTIALS_FILE: str
+    DISABLE_AUTH: bool = False
+    DEV_USER_ID: str = "dev_uid_tqwatcSdikMYybndtZAr"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

@@ -31,7 +31,9 @@ class DeviceType(str, Enum):
 class ClientHandshake(BaseModel):
     """Everything the client provides when opening a connection, before the server adds its own fields."""
 
-    user_id: str
+    id_token: str = ""
+    user_id: str = ""
+    """Populated server-side from the verified id_token; clients should not set this."""
     device_id: str
     session_id: str
     device_type: DeviceType

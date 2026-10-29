@@ -2,6 +2,7 @@ import time
 import uuid
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status
+from firebase_admin import auth as firebase_auth
 
 from app.api.endpoints.connections import (
     deliver_backlog,
@@ -45,6 +46,21 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
 
     handshake_payload = await websocket.receive_json()
     handshake = ClientHandshake(**handshake_payload)
+
+    if settings.DISABLE_AUTH:
+        handshake.user_id = settings.DEV_USER_ID
+    else:
+        try:
+            decoded = firebase_auth.verify_id_token(handshake.id_token)
+        except Exception:
+            logger.error("socket handshake rejected: invalid or expired id_token")
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+            return
+        if not decoded.get("email_verified", False):
+            logger.error("socket handshake rejected: email not verified")
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+            return
+        handshake.user_id = decoded["uid"]
 
     connection_id = str(uuid.uuid4())
     connected_at = int(time.time() * 1000)
