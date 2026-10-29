@@ -7,6 +7,23 @@ import type { Profile } from "../../features/profile/types";
 import { Avatar } from "../ui/Avatar";
 import { ChatBubbleIcon } from "../ui/ChatBubbleIcon";
 import { SearchIcon } from "../ui/SearchIcon";
+import { Skeleton } from "../ui/Skeleton";
+
+function ChatListSkeleton() {
+  return (
+    <div className="space-y-1">
+      {Array.from({ length: 6 }).map((_, index) => (
+        <div key={index} className="flex items-center gap-3 px-3 py-2.5">
+          <Skeleton className="h-10 w-10 shrink-0 rounded-full" />
+          <div className="min-w-0 flex-1 space-y-2">
+            <Skeleton className="h-3 w-2/5" />
+            <Skeleton className="h-2.5 w-1/3" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export function Sidebar() {
   const { profile } = useAuth();
@@ -86,7 +103,7 @@ export function Sidebar() {
           {query.trim() ? (
             <div className="flex-1 overflow-y-auto px-2 pt-2">
               {isSearching ? (
-                <p className="px-3 py-2 text-sm text-ink-muted">Searching...</p>
+                <ChatListSkeleton />
               ) : results.length === 0 ? (
                 <p className="px-3 py-2 text-sm text-ink-muted">No users found.</p>
               ) : (
@@ -109,7 +126,7 @@ export function Sidebar() {
           ) : (
             <div className="flex-1 overflow-y-auto px-2 pt-2">
               {isLoadingChats ? (
-                <p className="px-3 py-2 text-sm text-ink-muted">Loading chats...</p>
+                <ChatListSkeleton />
               ) : chats.length === 0 ? (
                 <p className="px-3 py-2 text-sm text-ink-muted">
                   No conversations yet. Search for someone to start chatting.

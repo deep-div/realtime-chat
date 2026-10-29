@@ -20,6 +20,7 @@ interface ChatContextValue {
   isLoadingChats: boolean;
   activeChat: ActiveChat | null;
   messages: ChatMessage[];
+  isLoadingMessages: boolean;
   openChat: (chat: ChatSummary) => Promise<void>;
   startDirectChat: (peer: Profile) => Promise<void>;
   sendMessage: (text: string) => void;
@@ -30,14 +31,35 @@ export const ChatContext = createContext<ChatContextValue | null>(null);
 export function ChatProvider({ children }: { children: ReactNode }) {
   const { user, profile } = useAuth();
   const [chats, setChats] = useState<ChatSummary[]>([]);
-  const [isLoadingChats, setIsLoadingChats] = useState(false);
+  // Starts true so the sidebar shows a loading skeleton instead of flashing
+  // "no conversations" before the initial GET /chats has even been fired.
+  const [isLoadingChats, setIsLoadingChats] = useState(true);
   const [activeChat, setActiveChat] = useState<ActiveChat | null>(null);
   const [messagesByChatId, setMessagesByChatId] = useState<Record<string, ChatMessage[]>>({});
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const socketRef = useRef<ChatSocket | null>(null);
+  const activeChatRef = useRef<ActiveChat | null>(null);
+  const ackedMessageIdsRef = useRef<Set<string>>(new Set());
+
+  function setActiveChatAndRef(chat: ActiveChat | null) {
+    activeChatRef.current = chat;
+    setActiveChat(chat);
+  }
+
+  function ackIfActiveChat(chatId: string, incoming: ChatMessage[]) {
+    if (activeChatRef.current?.chatId !== chatId) return;
+    for (const message of incoming) {
+      if (message.sender_id === profile?.user_id) continue;
+      if (ackedMessageIdsRef.current.has(message.message_id)) continue;
+      ackedMessageIdsRef.current.add(message.message_id);
+      socketRef.current?.ackRead(chatId, message.message_id);
+    }
+  }
 
   useEffect(() => {
     if (!user || !profile) {
       setChats([]);
+      setIsLoadingChats(false);
       return;
     }
 
@@ -61,6 +83,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           if (existing.some((m) => m.message_id === message.message_id)) return prev;
           return { ...prev, [message.chat_id]: [...existing, message] };
         });
+        ackIfActiveChat(message.chat_id, [message]);
       },
       onMessageStatus: ({ messageId, status, message }) => {
         setMessagesByChatId((prev) => {
@@ -107,38 +130,31 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   }, [user, profile]);
 
   async function loadMessagesIfNeeded(chatId: string) {
-    if (messagesByChatId[chatId]) return;
-    const history = await getChatMessages(chatId);
-    setMessagesByChatId((prev) => ({ ...prev, [chatId]: history }));
+    if (messagesByChatId[chatId]) {
+      ackIfActiveChat(chatId, messagesByChatId[chatId]);
+      return;
+    }
+    setIsLoadingMessages(true);
+    try {
+      const history = await getChatMessages(chatId);
+      setMessagesByChatId((prev) => ({ ...prev, [chatId]: history }));
+      ackIfActiveChat(chatId, history);
+    } finally {
+      setIsLoadingMessages(false);
+    }
   }
 
   async function openChat(chat: ChatSummary) {
     if (!chat.peer) return;
-    setActiveChat({ chatId: chat.chat_id, peer: chat.peer });
+    setActiveChatAndRef({ chatId: chat.chat_id, peer: chat.peer });
     await loadMessagesIfNeeded(chat.chat_id);
   }
 
   async function startDirectChat(peer: Profile) {
+    // Get-or-create the chat row, but don't add it to the visible chat list yet - like
+    // WhatsApp, a chat only shows up (on either side) once a message has actually been sent.
     const chat = await createDirectChat(peer.user_id);
-    setActiveChat({ chatId: chat.chat_id, peer });
-
-    setChats((prev) =>
-      prev.some((c) => c.chat_id === chat.chat_id)
-        ? prev
-        : [
-            {
-              chat_id: chat.chat_id,
-              chat_type: chat.chat_type,
-              title: chat.title,
-              avatar_media_id: null,
-              created_by: profile?.user_id ?? "",
-              created_at: chat.created_at,
-              peer,
-            },
-            ...prev,
-          ],
-    );
-
+    setActiveChatAndRef({ chatId: chat.chat_id, peer });
     await loadMessagesIfNeeded(chat.chat_id);
   }
 
@@ -164,6 +180,23 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       [activeChat.chatId]: [...(prev[activeChat.chatId] ?? []), optimisticMessage],
     }));
 
+    setChats((prev) =>
+      prev.some((c) => c.chat_id === activeChat.chatId)
+        ? prev
+        : [
+            {
+              chat_id: activeChat.chatId,
+              chat_type: "direct",
+              title: null,
+              avatar_media_id: null,
+              created_by: profile?.user_id ?? "",
+              created_at: now,
+              peer: activeChat.peer,
+            },
+            ...prev,
+          ],
+    );
+
     socketRef.current?.sendMessage(activeChat.chatId, clientMessageId, text, PLACEHOLDER_SCHEME);
   }
 
@@ -173,11 +206,12 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       isLoadingChats,
       activeChat,
       messages: activeChat ? messagesByChatId[activeChat.chatId] ?? [] : [],
+      isLoadingMessages,
       openChat,
       startDirectChat,
       sendMessage,
     }),
-    [chats, isLoadingChats, activeChat, messagesByChatId],
+    [chats, isLoadingChats, activeChat, messagesByChatId, isLoadingMessages],
   );
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;
