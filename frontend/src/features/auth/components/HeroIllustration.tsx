@@ -78,7 +78,6 @@ export function HeroIllustration() {
           strokeDasharray="1 7"
           strokeLinecap="round"
         />
-        <circle cx="300" cy="275" r="4" fill="#2563eb" />
         <circle cx="255" cy="328" r="4" fill="#2563eb" />
         <ProfileCard x={60} y={330} width={220} height={66} />
 
@@ -90,7 +89,6 @@ export function HeroIllustration() {
           strokeDasharray="1 7"
           strokeLinecap="round"
         />
-        <circle cx="595" cy="172" r="4" fill="#2563eb" />
         <circle cx="632" cy="132" r="4" fill="#2563eb" />
         <ProfileCard x={640} y={70} width={220} height={66} />
 
