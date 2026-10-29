@@ -14,7 +14,7 @@ export function NavRail({ activeView, onSelectView, onOpenProfile, isProfileOpen
   const { profile } = useAuth();
 
   return (
-    <aside className="hidden w-16 shrink-0 flex-col items-center border-r border-border bg-surface-cream py-4 md:flex">
+    <aside className="hidden w-16 shrink-0 flex-col items-center border-r border-border bg-surface-gray py-4 md:flex">
       <nav className="flex flex-1 flex-col items-center gap-2">
         <button
           type="button"
