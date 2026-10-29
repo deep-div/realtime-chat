@@ -67,7 +67,7 @@ export function ChatView() {
         </div>
       </div>
 
-      <div className="flex-1 space-y-2 overflow-y-auto bg-surface-gray px-5 py-4">
+      <div className="flex-1 space-y-2 overflow-y-auto scrollbar-hide bg-surface-gray px-5 py-4">
         {isLoadingMessages ? (
           <MessagesSkeleton />
         ) : (

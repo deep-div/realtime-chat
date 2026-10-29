@@ -106,7 +106,7 @@ export function Sidebar({ focusSearch = false }: SidebarProps) {
           </p>
         </div>
 
-        <div className="flex-1 space-y-0.5 overflow-y-auto px-2 pt-3">
+        <div className="flex-1 space-y-0.5 overflow-y-auto scrollbar-hide px-2 pt-3">
           {isSuggestedLoading ? (
             <ChatListSkeleton />
           ) : (
@@ -178,7 +178,7 @@ export function Sidebar({ focusSearch = false }: SidebarProps) {
       </div>
 
       {query.trim() ? (
-            <div className="flex-1 overflow-y-auto px-2 pt-2">
+            <div className="flex-1 overflow-y-auto scrollbar-hide px-2 pt-2">
               {isSearching ? (
                 <ChatListSkeleton />
               ) : results.length === 0 ? (
@@ -201,7 +201,7 @@ export function Sidebar({ focusSearch = false }: SidebarProps) {
               )}
             </div>
           ) : (
-            <div className="flex-1 overflow-y-auto px-2 pt-2">
+            <div className="flex-1 overflow-y-auto scrollbar-hide px-2 pt-2">
               {isLoadingChats ? (
                 <ChatListSkeleton />
               ) : chats.length === 0 ? null : (

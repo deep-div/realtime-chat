@@ -98,7 +98,7 @@ export function EditProfileView({ onBack }: EditProfileViewProps) {
         <span className="text-base font-semibold text-ink">Profile</span>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto scrollbar-hide">
         <form className="flex flex-col gap-5 px-5 py-6" onSubmit={handleSubmit}>
           <div className="flex flex-col items-center gap-4 pb-2">
             <div className="relative">
