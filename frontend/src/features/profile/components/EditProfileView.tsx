@@ -16,7 +16,7 @@ interface EditProfileViewProps {
 }
 
 export function EditProfileView({ onBack }: EditProfileViewProps) {
-  const { user, profile, refreshProfile, signOut } = useAuth();
+  const { profile, refreshProfile, signOut } = useAuth();
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [username, setUsername] = useState(profile?.username ?? "");
   const [displayName, setDisplayName] = useState(profile?.display_name ?? "");
@@ -170,21 +170,12 @@ export function EditProfileView({ onBack }: EditProfileViewProps) {
           </Button>
         </form>
 
-        <div className="mt-auto flex flex-col gap-3 border-t border-border px-5 py-5">
-          {user?.email && (
-            <div className="flex flex-col gap-1">
-              <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
-                Account
-              </p>
-              <p className="text-sm text-ink-muted">{user.email}</p>
-            </div>
-          )}
-
+        <div className="mt-auto border-t border-border px-5 py-5">
           <button
             type="button"
             onClick={() => void handleSignOut()}
             disabled={isSigningOut}
-            className="flex items-center gap-2 rounded-xl px-2 py-2 text-sm font-semibold text-red-500 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-surface-muted px-4 py-3 text-sm font-semibold text-ink transition-colors hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-60"
           >
             <LogOutIcon className="h-4.5 w-4.5" />
             {isSigningOut ? "Signing out…" : "Sign out"}
