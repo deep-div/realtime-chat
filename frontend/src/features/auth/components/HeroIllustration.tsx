@@ -29,6 +29,9 @@ export function HeroIllustration() {
           <filter id="soften" x="-50%" y="-50%" width="200%" height="200%">
             <feGaussianBlur stdDeviation="28" />
           </filter>
+          <filter id="bubbleShadow" x="-50%" y="-50%" width="200%" height="200%">
+            <feDropShadow dx="0" dy="10" stdDeviation="14" floodColor="#1e3a8a" floodOpacity="0.18" />
+          </filter>
           <radialGradient id="haloGradient" cx="50%" cy="50%" r="50%">
             <stop offset="0%" stopColor="#ffffff" stopOpacity="0.95" />
             <stop offset="70%" stopColor="#ffffff" stopOpacity="0.7" />
@@ -87,12 +90,12 @@ export function HeroIllustration() {
         <circle cx="610" cy="268" r="3.5" fill="#2563eb" />
         <ProfileCard x={650} y={278} width={190} height={56} />
 
-        <g>
-          <ellipse cx="520" cy="228" rx="130" ry="112" fill="url(#haloGradient)" />
-          <path d="M595,290 Q608,316 630,328 Q604,320 592,298 Z" fill="#ffffff" opacity="0.85" filter="url(#soften)" />
+        <g filter="url(#bubbleShadow)">
+          <ellipse cx="500" cy="268" rx="104" ry="86" fill="#ffffff" opacity="0.95" />
+          <path d="M565,330 Q585,352 612,358 Q588,342 578,322 Z" fill="#ffffff" opacity="0.95" />
         </g>
 
-        <g>
+        <g filter="url(#bubbleShadow)">
           <ellipse cx="428" cy="232" rx="128" ry="104" fill="url(#bubbleGradient)" />
           <path d="M350,312 Q335,344 305,354 Q340,340 354,316 Z" fill="url(#bubbleGradient)" />
           <circle cx="388" cy="234" r="12" fill="#ffffff" />
