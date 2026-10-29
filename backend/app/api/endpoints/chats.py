@@ -22,6 +22,8 @@ from app.services.chat.store import (
     NotAMemberError,
     chat_store,
 )
+from app.services.messaging.schema import ChatMessage
+from app.services.messaging.store import message_store
 
 router = APIRouter(prefix="/chats")
 
@@ -75,6 +77,21 @@ async def get_chat_members(
     if not any(member.user_id == user_id for member in members):
         raise HTTPException(status_code=404, detail="chat not found")
     return members
+
+
+@router.get("/{chat_id}/messages", response_model=list[ChatMessage])
+async def get_chat_messages(
+    chat_id: str,
+    limit: int = 50,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> list[ChatMessage]:
+    """Fetch a chat's most recent messages, oldest first. 404s if the caller isn't a member."""
+    members = await chat_store.list_members(db, chat_id)
+    if not any(member.user_id == user_id for member in members):
+        raise HTTPException(status_code=404, detail="chat not found")
+
+    return await message_store.get_messages(db, chat_id, limit)
 
 
 @router.post(
