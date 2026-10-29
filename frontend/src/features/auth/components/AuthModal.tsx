@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 import { Button } from "../../../components/ui/Button";
 import { GoogleIcon } from "../../../components/ui/GoogleIcon";
 import { Input } from "../../../components/ui/Input";
@@ -10,6 +10,7 @@ type Mode = "sign-in" | "sign-up";
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
+  initialMode?: Mode;
 }
 
 interface Feedback {
@@ -47,19 +48,23 @@ function getErrorMessage(error: unknown, fallback: string): string {
   return fallback;
 }
 
-export function AuthModal({ isOpen, onClose }: AuthModalProps) {
+export function AuthModal({ isOpen, onClose, initialMode = "sign-in" }: AuthModalProps) {
   const {
     signInWithGoogle,
     signInWithEmail,
     signUpWithEmail,
     resendVerificationEmail,
   } = useAuth();
-  const [mode, setMode] = useState<Mode>("sign-in");
+  const [mode, setMode] = useState<Mode>(initialMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [needsVerification, setNeedsVerification] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) setMode(initialMode);
+  }, [isOpen, initialMode]);
 
   const resetState = () => {
     setEmail("");
@@ -67,7 +72,6 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
     setFeedback(null);
     setIsSubmitting(false);
     setNeedsVerification(false);
-    setMode("sign-in");
   };
 
   const handleClose = () => {
