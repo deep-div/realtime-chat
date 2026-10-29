@@ -1,10 +1,13 @@
 import { AuthLanding } from "../../features/auth/components/AuthLanding";
 import { ChatPlaceholder } from "../../features/auth/components/ChatPlaceholder";
 import { useAuth } from "../../features/auth/hooks/useAuth";
+import { ChatView } from "../../features/chat/components/ChatView";
+import { useChat } from "../../features/chat/hooks/useChat";
 import { CompleteProfileForm } from "../../features/profile/components/CompleteProfileForm";
 
 export function MainPanel() {
   const { user, isLoading, profile, isProfileLoading } = useAuth();
+  const { activeChat } = useChat();
 
   function renderContent() {
     if (isLoading) return null;
@@ -13,6 +16,14 @@ export function MainPanel() {
       return isProfileLoading ? null : <CompleteProfileForm />;
     }
     return <ChatPlaceholder />;
+  }
+
+  if (activeChat) {
+    return (
+      <main className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-surface">
+        <ChatView />
+      </main>
+    );
   }
 
   return (

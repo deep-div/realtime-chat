@@ -1,10 +1,13 @@
 import { AppLayout } from "./components/layout/AppLayout";
 import { AuthProvider } from "./features/auth/context/AuthContext";
+import { ChatProvider } from "./features/chat/context/ChatContext";
 
 function App() {
   return (
     <AuthProvider>
-      <AppLayout />
+      <ChatProvider>
+        <AppLayout />
+      </ChatProvider>
     </AuthProvider>
   );
 }

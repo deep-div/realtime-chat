@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../../features/auth/hooks/useAuth";
+import { useChat } from "../../features/chat/hooks/useChat";
 import { EditProfileView } from "../../features/profile/components/EditProfileView";
 import { searchUsers } from "../../features/profile/api";
 import type { Profile } from "../../features/profile/types";
@@ -9,10 +10,17 @@ import { SearchIcon } from "../ui/SearchIcon";
 
 export function Sidebar() {
   const { profile } = useAuth();
+  const { chats, isLoadingChats, activeChat, openChat, startDirectChat } = useChat();
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Profile[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+
+  function handleSelectUser(user: Profile) {
+    startDirectChat(user);
+    setQuery("");
+    setResults([]);
+  }
 
   useEffect(() => {
     const trimmed = query.trim();
@@ -75,7 +83,7 @@ export function Sidebar() {
             </div>
           </div>
 
-          {query.trim() && (
+          {query.trim() ? (
             <div className="flex-1 overflow-y-auto px-2 pt-2">
               {isSearching ? (
                 <p className="px-3 py-2 text-sm text-ink-muted">Searching...</p>
@@ -86,12 +94,49 @@ export function Sidebar() {
                   <button
                     key={user.user_id}
                     type="button"
+                    onClick={() => handleSelectUser(user)}
                     className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-surface-muted"
                   >
                     <Avatar src={user.avatar_url} label={user.display_name} className="h-10 w-10" />
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium text-ink">{user.display_name}</p>
                       <p className="truncate text-xs text-ink-muted">@{user.username}</p>
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+          ) : (
+            <div className="flex-1 overflow-y-auto px-2 pt-2">
+              {isLoadingChats ? (
+                <p className="px-3 py-2 text-sm text-ink-muted">Loading chats...</p>
+              ) : chats.length === 0 ? (
+                <p className="px-3 py-2 text-sm text-ink-muted">
+                  No conversations yet. Search for someone to start chatting.
+                </p>
+              ) : (
+                chats.map((chat) => (
+                  <button
+                    key={chat.chat_id}
+                    type="button"
+                    onClick={() => openChat(chat)}
+                    disabled={!chat.peer}
+                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-surface-muted ${
+                      activeChat?.chatId === chat.chat_id ? "bg-surface-muted" : ""
+                    }`}
+                  >
+                    <Avatar
+                      src={chat.peer?.avatar_url}
+                      label={chat.peer?.display_name ?? "?"}
+                      className="h-10 w-10"
+                    />
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-ink">
+                        {chat.peer?.display_name ?? "Unknown user"}
+                      </p>
+                      {chat.peer && (
+                        <p className="truncate text-xs text-ink-muted">@{chat.peer.username}</p>
+                      )}
                     </div>
                   </button>
                 ))
