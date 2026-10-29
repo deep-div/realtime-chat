@@ -124,15 +124,9 @@ export function EditProfileView({ onBack }: EditProfileViewProps) {
                 className="hidden"
               />
             </div>
-            <p className="text-xs font-medium uppercase tracking-wide text-ink-muted">
-              Tap the camera to change your photo
-            </p>
           </div>
 
           <div className="flex flex-col gap-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
-              Your info
-            </p>
             <Input
               id="edit-username"
               label="Username"
