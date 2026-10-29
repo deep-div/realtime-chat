@@ -67,7 +67,7 @@ export function ChatView() {
         </div>
       </div>
 
-      <div className="flex-1 space-y-2 overflow-y-auto px-5 py-4">
+      <div className="flex-1 space-y-2 overflow-y-auto bg-surface-gray px-5 py-4">
         {isLoadingMessages ? (
           <MessagesSkeleton />
         ) : (
@@ -76,8 +76,8 @@ export function ChatView() {
             return (
               <div key={message.message_id} className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
                 <div
-                  className={`max-w-[70%] rounded-2xl px-4 py-2 text-sm ${
-                    isMine ? "bg-primary text-primary-foreground" : "bg-surface-muted text-ink"
+                  className={`max-w-[70%] rounded-2xl px-4 py-2 text-sm shadow-sm ${
+                    isMine ? "bg-primary text-primary-foreground" : "bg-surface text-ink"
                   }`}
                 >
                   <p>{message.content.ciphertext}</p>
@@ -102,7 +102,7 @@ export function ChatView() {
             if (event.key === "Enter") handleSend();
           }}
           placeholder="Type a message..."
-          className="w-full rounded-xl bg-surface-muted px-4 py-2.5 text-sm text-ink placeholder:text-ink-muted focus:outline-none"
+          className="w-full rounded-full bg-surface-muted px-4 py-2.5 text-sm text-ink placeholder:text-ink-muted focus:outline-none"
         />
         <button
           type="button"
