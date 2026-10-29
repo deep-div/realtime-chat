@@ -26,6 +26,8 @@ class Settings(BaseSettings):
     DISABLE_AUTH: bool = False
     DEV_USER_ID: str = "dev_uid_tqwatcSdikMYybndtZAr"
 
+    CORS_ORIGINS: list[str] = ["http://localhost:4000"]
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
