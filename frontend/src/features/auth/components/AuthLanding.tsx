@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "../../../components/ui/Button";
 import { AuthModal } from "./AuthModal";
-import heroImage from "../../../assests/image.png";
+import heroImage from "../../../assests/hero.png";
 
 export function AuthLanding() {
   const [authMode, setAuthMode] = useState<"sign-in" | "sign-up" | null>(null);
