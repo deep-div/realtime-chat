@@ -87,7 +87,7 @@ export function Sidebar() {
 
   if (!user) {
     return (
-      <aside className="relative hidden w-[360px] shrink-0 flex-col overflow-hidden border-r border-border/30 bg-gradient-to-b from-surface to-surface-muted/60 shadow-[1px_0_12px_rgba(22,21,43,0.03)] md:flex">
+      <aside className="relative hidden w-[360px] shrink-0 flex-col overflow-hidden border-r border-border bg-surface-muted shadow-[1px_0_12px_rgba(22,21,43,0.05)] md:flex">
         <div className="px-5 pt-6">
           <h2 className="text-base font-semibold tracking-tight text-ink">
             Suggested people
@@ -153,7 +153,7 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="hidden w-[360px] shrink-0 flex-col border-r border-border/30 bg-gradient-to-b from-surface to-surface-muted/60 shadow-[1px_0_12px_rgba(22,21,43,0.03)] md:flex">
+    <aside className="hidden w-[360px] shrink-0 flex-col border-r border-border bg-surface-muted shadow-[1px_0_12px_rgba(22,21,43,0.05)] md:flex">
       {isEditingProfile ? (
         <EditProfileView onBack={() => setIsEditingProfile(false)} />
       ) : (
