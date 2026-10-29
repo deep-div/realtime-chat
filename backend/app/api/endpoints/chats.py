@@ -11,6 +11,7 @@ from app.services.chat.schema import (
     Chat,
     ChatCreated,
     ChatMember,
+    ChatSummary,
     CreateDirectChat,
     CreateGroupChat,
 )
@@ -24,6 +25,7 @@ from app.services.chat.store import (
 )
 from app.services.messaging.schema import ChatMessage
 from app.services.messaging.store import message_store
+from app.services.users.store import user_store
 
 router = APIRouter(prefix="/chats")
 
@@ -40,13 +42,26 @@ async def create_chat(
     return await chat_store.create_group_chat(db, user_id, request)
 
 
-@router.get("", response_model=list[Chat])
+@router.get("", response_model=list[ChatSummary])
 async def list_my_chats(
+    limit: int = 50,
+    before: int | None = None,
     user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
-) -> list[Chat]:
-    """List every chat the requesting user is a member of."""
-    return await chat_store.list_my_chats(db, user_id)
+) -> list[ChatSummary]:
+    """List a page of the requesting user's chats, newest-created first, each with the
+    other member's profile. Pass `before` (a chat's created_at) to fetch the next page."""
+    pairs = await chat_store.list_my_chats_with_peer_ids(db, user_id, limit, before)
+
+    peer_ids = {peer_id for _, peer_id in pairs if peer_id is not None}
+    profiles_by_id = {
+        profile.user_id: profile for profile in await user_store.get_profiles(db, list(peer_ids))
+    }
+
+    return [
+        ChatSummary(**chat.model_dump(), peer=profiles_by_id.get(peer_id) if peer_id else None)
+        for chat, peer_id in pairs
+    ]
 
 
 @router.get("/{chat_id}", response_model=Chat)

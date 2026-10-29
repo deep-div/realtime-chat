@@ -351,6 +351,36 @@ class ChatStore:
         await self._cache_user_chats(user_id, chats)
         return chats
 
+    async def list_my_chats_with_peer_ids(
+        self, session: AsyncSession, user_id: str, limit: int = 50, before: int | None = None
+    ) -> list[tuple[Chat, str | None]]:
+        """Fetch a page of the user's chats, newest-created first, paired with each direct
+        chat's other member id.
+
+        Bypasses the list_my_chats cache since it needs the direct_user_min/max columns
+        that cache doesn't store, and cursor pagination isn't worth caching.
+        """
+        query = (
+            select(ChatModel)
+            .join(ChatMemberModel, ChatMemberModel.chat_id == ChatModel.chat_id)
+            .where(ChatMemberModel.user_id == user_id)
+            .order_by(ChatModel.created_at.desc(), ChatModel.chat_id.desc())
+            .limit(limit)
+        )
+        if before is not None:
+            query = query.where(ChatModel.created_at < before)
+
+        result = await session.execute(query)
+        rows = list(result.scalars().all())
+
+        pairs: list[tuple[Chat, str | None]] = []
+        for row in rows:
+            peer_id = None
+            if row.chat_type == ChatType.DIRECT.value:
+                peer_id = row.direct_user_max if row.direct_user_min == user_id else row.direct_user_min
+            pairs.append((self._row_to_chat(row), peer_id))
+        return pairs
+
     async def _get_direct_chat_by_pair(
         self, session: AsyncSession, user_min: str, user_max: str
     ) -> tuple[ChatModel, list[str]] | None:

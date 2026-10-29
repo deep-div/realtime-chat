@@ -3,6 +3,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from app.services.users.schema import User
+
 
 class ChatType(str, Enum):
     """Whether a chat is a 1:1 direct conversation or a multi-member group."""
@@ -38,6 +40,15 @@ class Chat(BaseModel):
     avatar_media_id: str | None = None
     created_by: str
     created_at: int
+
+
+class ChatSummary(Chat):
+    """A chat as shown in a user's chat list, with the other member's profile attached.
+
+    `peer` is populated for direct chats (None for groups, or if their profile is missing).
+    """
+
+    peer: User | None = None
 
 
 class CreateDirectChat(BaseModel):

@@ -144,6 +144,13 @@ class UserStore:
         )
         return [self._row_to_user(row) for row in result.scalars().all()]
 
+    async def get_profiles(self, session: AsyncSession, user_ids: list[str]) -> list[User]:
+        """Batch-fetch profiles for the given user ids in a single query, skipping the cache."""
+        if not user_ids:
+            return []
+        result = await session.execute(select(UserModel).where(UserModel.user_id.in_(user_ids)))
+        return [self._row_to_user(row) for row in result.scalars().all()]
+
     def _row_to_user(self, row: UserModel) -> User:
         return User(
             user_id=row.user_id,
