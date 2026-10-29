@@ -1,14 +1,14 @@
 import { useState } from "react";
 import { Button } from "../../../components/ui/Button";
 import { AuthModal } from "./AuthModal";
-import { HeroIllustration } from "./HeroIllustration";
+import heroImage from "../../../assests/image.png";
 
 export function AuthLanding() {
   const [authMode, setAuthMode] = useState<"sign-in" | "sign-up" | null>(null);
 
   return (
     <div className="flex flex-col items-center gap-2 px-6 text-center">
-      <HeroIllustration />
+      <img src={heroImage} alt="" className="h-64 w-[36rem] object-contain" />
 
       <h1 className="mt-3 text-[1.75rem] font-bold tracking-tight text-ink">
         Messenger
