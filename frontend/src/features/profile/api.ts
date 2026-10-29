@@ -27,6 +27,11 @@ export async function updateMyProfile(input: UpdateProfileInput): Promise<Profil
   });
 }
 
+/** Searches other users by username prefix. */
+export async function searchUsers(query: string): Promise<Profile[]> {
+  return apiFetch<Profile[]>(`/users/search?q=${encodeURIComponent(query)}`);
+}
+
 export async function uploadMyAvatar(file: File): Promise<Profile> {
   const formData = new FormData();
   formData.append("file", file);

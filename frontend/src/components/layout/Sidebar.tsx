@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "../../features/auth/hooks/useAuth";
 import { EditProfileView } from "../../features/profile/components/EditProfileView";
+import { searchUsers } from "../../features/profile/api";
+import type { Profile } from "../../features/profile/types";
 import { Avatar } from "../ui/Avatar";
 import { ChatBubbleIcon } from "../ui/ChatBubbleIcon";
 import { SearchIcon } from "../ui/SearchIcon";
@@ -8,6 +10,28 @@ import { SearchIcon } from "../ui/SearchIcon";
 export function Sidebar() {
   const { profile } = useAuth();
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<Profile[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+
+  useEffect(() => {
+    const trimmed = query.trim();
+    if (!trimmed) {
+      setResults([]);
+      setIsSearching(false);
+      return;
+    }
+
+    setIsSearching(true);
+    const timeoutId = setTimeout(() => {
+      searchUsers(trimmed)
+        .then(setResults)
+        .catch(() => setResults([]))
+        .finally(() => setIsSearching(false));
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [query]);
 
   return (
     <aside className="hidden w-[360px] shrink-0 flex-col border-r border-border bg-surface md:flex">
@@ -43,11 +67,37 @@ export function Sidebar() {
               <SearchIcon className="h-5 w-5 shrink-0 text-ink-muted" />
               <input
                 type="text"
-                placeholder="Search conversations..."
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search people..."
                 className="w-full bg-transparent text-sm text-ink placeholder:text-ink-muted focus:outline-none"
               />
             </div>
           </div>
+
+          {query.trim() && (
+            <div className="flex-1 overflow-y-auto px-2 pt-2">
+              {isSearching ? (
+                <p className="px-3 py-2 text-sm text-ink-muted">Searching...</p>
+              ) : results.length === 0 ? (
+                <p className="px-3 py-2 text-sm text-ink-muted">No users found.</p>
+              ) : (
+                results.map((user) => (
+                  <button
+                    key={user.user_id}
+                    type="button"
+                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-surface-muted"
+                  >
+                    <Avatar src={user.avatar_url} label={user.display_name} className="h-10 w-10" />
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-ink">{user.display_name}</p>
+                      <p className="truncate text-xs text-ink-muted">@{user.username}</p>
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+          )}
         </>
       )}
     </aside>
