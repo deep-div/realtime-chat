@@ -33,7 +33,7 @@ export function AppLayout() {
         </div>
       </div>
       <div className="flex min-w-0 flex-1 bg-surface-gray px-3 py-0.5">
-        <div className="flex min-w-0 flex-1 overflow-hidden rounded-2xl bg-[#f6f5fb] shadow-sm">
+        <div className="flex min-w-0 flex-1 overflow-hidden rounded-2xl bg-[#ffffff] shadow-sm">
           <MainPanel />
         </div>
       </div>

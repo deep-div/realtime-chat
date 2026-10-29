@@ -20,14 +20,14 @@ export function MainPanel() {
 
   if (activeChat) {
     return (
-      <main className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-[#f6f5fb]">
+      <main className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-[#ffffff]">
         <ChatView />
       </main>
     );
   }
 
   return (
-    <main className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-[#f6f5fb]">
+    <main className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-[#ffffff]">
       <div className="pointer-events-none absolute -left-32 -top-32 h-96 w-96 rounded-full bg-primary-soft/60 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-40 -right-24 h-[28rem] w-[28rem] rounded-full bg-primary-soft/50 blur-3xl" />
 
