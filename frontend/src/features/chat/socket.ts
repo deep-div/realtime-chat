@@ -16,12 +16,21 @@ export interface ChatSocketHandlers {
   onMessageStatus: (payload: { messageId?: string; status: string; message?: ChatMessage }) => void;
   onMessageError: (payload: { clientMessageId?: string; messageId?: string; error: string }) => void;
   onPresence: (users: UserPresence[]) => void;
+  /** Fires after every successful handshake, including reconnects - re-subscribe presence here. */
+  onConnected?: () => void;
 }
 
-/** Thin wrapper around the app's single /ws connection: handshake, heartbeat, send/receive. */
+const RECONNECT_BASE_DELAY_MS = 1000;
+const RECONNECT_MAX_DELAY_MS = 30000;
+
+/** Thin wrapper around the app's single /ws connection: handshake, heartbeat, send/receive.
+ * Reconnects automatically with backoff on any unexpected drop. */
 export class ChatSocket {
   private socket: WebSocket | null = null;
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private reconnectAttempts = 0;
+  private intentionallyClosed = false;
   private readonly deviceId = crypto.randomUUID();
   private readonly sessionId = crypto.randomUUID();
   private handshakeSent = false;
@@ -30,6 +39,12 @@ export class ChatSocket {
   constructor(private readonly handlers: ChatSocketHandlers) {}
 
   async connect(): Promise<void> {
+    this.intentionallyClosed = false;
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+
     const idToken = await firebaseAuth.currentUser?.getIdToken();
     if (!idToken) return;
 
@@ -38,6 +53,7 @@ export class ChatSocket {
     this.socket = socket;
 
     socket.onopen = () => {
+      this.reconnectAttempts = 0;
       socket.send(
         JSON.stringify({
           id_token: idToken,
@@ -57,11 +73,31 @@ export class ChatSocket {
       this.handleIncoming(payload);
     };
 
+    socket.onerror = () => {
+      // The close event always follows an error event, so reconnect scheduling
+      // lives in onclose alone - this just prevents an unhandled error log.
+    };
+
     socket.onclose = () => {
       this.stopHeartbeat();
       this.socket = null;
       this.handshakeSent = false;
+      this.sendQueue = [];
+      if (!this.intentionallyClosed) this.scheduleReconnect();
     };
+  }
+
+  private scheduleReconnect() {
+    if (this.reconnectTimer) return;
+    const delay = Math.min(
+      RECONNECT_BASE_DELAY_MS * 2 ** this.reconnectAttempts,
+      RECONNECT_MAX_DELAY_MS,
+    );
+    this.reconnectAttempts += 1;
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null;
+      this.connect();
+    }, delay);
   }
 
   private handleIncoming(payload: IncomingEvent) {
@@ -75,6 +111,7 @@ export class ChatSocket {
     }
     if ("type" in payload && payload.type === "handshake_ack") {
       this.startHeartbeat();
+      this.handlers.onConnected?.();
       return;
     }
     if ("type" in payload && payload.type === "message_status") {
@@ -150,6 +187,11 @@ export class ChatSocket {
   }
 
   disconnect() {
+    this.intentionallyClosed = true;
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
     this.stopHeartbeat();
     this.socket?.close();
     this.socket = null;

@@ -43,6 +43,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const activeChatRef = useRef<ActiveChat | null>(null);
   const ackedMessageIdsRef = useRef<Set<string>>(new Set());
   const subscribedPeerIdsRef = useRef<Set<string>>(new Set());
+  const chatsRef = useRef<ChatSummary[]>([]);
   // Chats whose full REST history has actually been fetched - distinct from
   // messagesByChatId having *any* entries, which can be populated early by
   // live/backlog socket messages before the history fetch ever runs.
@@ -62,6 +63,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       socketRef.current?.ackRead(chatId, message.message_id);
     }
   }
+
+  useEffect(() => {
+    chatsRef.current = chats;
+  }, [chats]);
 
   useEffect(() => {
     if (!user || !profile) {
@@ -148,6 +153,20 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           for (const user of users) next[user.user_id] = user;
           return next;
         });
+      },
+      onConnected: () => {
+        // The backend's watcher list is keyed by connection id, so a reconnect
+        // (whether after a dropped network or an auto-retry) starts with none -
+        // re-subscribe to everyone we currently care about.
+        const peerIds = new Set<string>();
+        for (const chat of chatsRef.current) if (chat.peer) peerIds.add(chat.peer.user_id);
+        if (activeChatRef.current) peerIds.add(activeChatRef.current.peer.user_id);
+        subscribedPeerIdsRef.current = peerIds;
+        if (peerIds.size > 0) {
+          const ids = [...peerIds];
+          socketRef.current?.subscribePresence(ids);
+          socketRef.current?.getPresence(ids);
+        }
       },
       onMessageError: ({ clientMessageId }) => {
         if (!clientMessageId) return;
