@@ -25,6 +25,7 @@ interface ChatContextValue {
   isLoadingMessages: boolean;
   presenceByUserId: Record<string, UserPresence>;
   typingByChatId: Record<string, boolean>;
+  typingUsersByChatId: Record<string, string[]>;
   privateKey: CryptoKey | null;
   openChat: (chat: ChatSummary) => Promise<void>;
   closeChat: () => void;
@@ -48,6 +49,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [presenceByUserId, setPresenceByUserId] = useState<Record<string, UserPresence>>({});
   const [typingByChatId, setTypingByChatId] = useState<Record<string, boolean>>({});
+  const [typingUsersByChatId, setTypingUsersByChatId] = useState<Record<string, string[]>>({});
   const socketRef = useRef<ChatSocket | null>(null);
   const activeChatRef = useRef<ActiveChat | null>(null);
   const ackedMessageIdsRef = useRef<Set<string>>(new Set());
@@ -87,6 +89,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       setMessagesByChatId({});
       setPresenceByUserId({});
       setTypingByChatId({});
+      setTypingUsersByChatId({});
       historyLoadedChatIdsRef.current.clear();
       ackedMessageIdsRef.current.clear();
       subscribedPeerIdsRef.current.clear();
@@ -165,8 +168,17 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           return next;
         });
       },
-      onTypingUpdate: ({ chatId, isTyping }) => {
+      onTypingUpdate: ({ chatId, userId, isTyping }) => {
         setTypingByChatId((prev) => ({ ...prev, [chatId]: isTyping }));
+        setTypingUsersByChatId((prev) => {
+          const current = prev[chatId] ?? [];
+          const next = isTyping
+            ? current.includes(userId)
+              ? current
+              : [...current, userId]
+            : current.filter((id) => id !== userId);
+          return { ...prev, [chatId]: next };
+        });
       },
       onConnected: () => {
         // The backend's watcher list is keyed by connection id, so a reconnect
@@ -367,6 +379,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       isLoadingMessages,
       presenceByUserId,
       typingByChatId,
+      typingUsersByChatId,
       privateKey,
       openChat,
       closeChat,
@@ -384,6 +397,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       presenceByUserId,
       privateKey,
       typingByChatId,
+      typingUsersByChatId,
     ],
   );
 

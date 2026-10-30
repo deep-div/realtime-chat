@@ -134,6 +134,7 @@ export function ChatView() {
     sendMessage,
     presenceByUserId,
     typingByChatId,
+    typingUsersByChatId,
     setTyping,
     privateKey,
     closeChat,
@@ -191,8 +192,16 @@ export function ChatView() {
         )
         .join(", ")
     : null;
+  const typingUserIds = (typingUsersByChatId[activeChat.chatId] ?? []).filter(
+    (id) => id !== profile?.user_id,
+  );
+  const typingNamesLine = typingUserIds.length
+    ? typingUserIds
+        .map((id) => members.find((member) => member.user_id === id)?.profile?.display_name ?? "Someone")
+        .join(", ") + (typingUserIds.length > 1 ? " are typing..." : " is typing...")
+    : null;
   const statusLine = isGroup
-    ? memberNamesLine ?? "Group chat"
+    ? typingNamesLine ?? memberNamesLine ?? "Group chat"
     : isPeerTyping
       ? "typing..."
       : presence?.status === "online"
@@ -251,7 +260,7 @@ export function ChatView() {
             className="h-9 w-9"
           />
           {!isGroup && presence?.status === "online" && (
-            <span className="absolute bottom-0 right-0 h-2 w-2 rounded-full border-2 border-surface bg-emerald-500" />
+            <span className="absolute bottom-0 right-0 h-2 w-2 rounded-full border-2 border-surface bg-primary" />
           )}
         </div>
         <div className="min-w-0 flex-1">
@@ -260,8 +269,10 @@ export function ChatView() {
           </p>
           <p
             className={`truncate text-xs ${
-              !isGroup && (isPeerTyping || presence?.status === "online") ? "text-emerald-600" : "text-ink-muted"
-            } ${isPeerTyping ? "italic" : ""}`}
+              (isGroup && typingNamesLine) || (!isGroup && (isPeerTyping || presence?.status === "online"))
+                ? "text-primary"
+                : "text-ink-muted"
+            } ${isPeerTyping || typingNamesLine ? "italic" : ""}`}
           >
             {statusLine}
           </p>
@@ -304,7 +315,7 @@ export function ChatView() {
         )}
       </div>
 
-      {isPeerTyping && (
+      {(isPeerTyping || (isGroup && typingNamesLine)) && (
         <div className="flex items-center gap-1 bg-surface-gray px-5 pt-1">
           <span className="h-1 w-1 animate-bounce rounded-full bg-ink-muted [animation-delay:-0.3s]" />
           <span className="h-1 w-1 animate-bounce rounded-full bg-ink-muted [animation-delay:-0.15s]" />
