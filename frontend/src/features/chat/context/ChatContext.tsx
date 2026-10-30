@@ -43,6 +43,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const activeChatRef = useRef<ActiveChat | null>(null);
   const ackedMessageIdsRef = useRef<Set<string>>(new Set());
   const subscribedPeerIdsRef = useRef<Set<string>>(new Set());
+  // Chats whose full REST history has actually been fetched - distinct from
+  // messagesByChatId having *any* entries, which can be populated early by
+  // live/backlog socket messages before the history fetch ever runs.
+  const historyLoadedChatIdsRef = useRef<Set<string>>(new Set());
 
   function setActiveChatAndRef(chat: ActiveChat | null) {
     activeChatRef.current = chat;
@@ -167,8 +171,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   }, [chats, activeChat]);
 
   async function loadMessagesIfNeeded(chatId: string) {
-    if (messagesByChatId[chatId]) {
-      ackIfActiveChat(chatId, messagesByChatId[chatId]);
+    if (historyLoadedChatIdsRef.current.has(chatId)) {
+      ackIfActiveChat(chatId, messagesByChatId[chatId] ?? []);
       return;
     }
     setIsLoadingMessages(true);
@@ -181,6 +185,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         merged = [...history, ...liveOnly];
         return { ...prev, [chatId]: merged };
       });
+      historyLoadedChatIdsRef.current.add(chatId);
       ackIfActiveChat(chatId, merged);
     } finally {
       setIsLoadingMessages(false);
