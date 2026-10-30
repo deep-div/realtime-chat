@@ -6,12 +6,14 @@ import { MessageStatusTicks } from "../../../components/ui/MessageStatusTicks";
 import { PhoneIcon } from "../../../components/ui/PhoneIcon";
 import { SearchIcon } from "../../../components/ui/SearchIcon";
 import { Skeleton } from "../../../components/ui/Skeleton";
+import { SmileIcon } from "../../../components/ui/SmileIcon";
 import { VideoIcon } from "../../../components/ui/VideoIcon";
 import { useAuth } from "../../auth/hooks/useAuth";
 import { getChatMembers } from "../api";
 import { useDecryptedText } from "../hooks/useDecryptedText";
 import { useChat } from "../hooks/useChat";
 import type { ChatMemberProfile, ChatMessage } from "../types";
+import { EmojiPicker } from "./EmojiPicker";
 
 const AVATAR_STACK_VISIBLE_COUNT = 3;
 
@@ -141,8 +143,10 @@ export function ChatView() {
   } = useChat();
   const [draft, setDraft] = useState("");
   const [members, setMembers] = useState<ChatMemberProfile[]>([]);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isTypingRef = useRef(false);
+  const draftInputRef = useRef<HTMLInputElement>(null);
 
   // Stop announcing typing when leaving this chat (switch or unmount), not just on send.
   useEffect(() => {
@@ -159,6 +163,10 @@ export function ChatView() {
       }
     };
   }, [activeChat?.chatId, setTyping]);
+
+  useEffect(() => {
+    setShowEmojiPicker(false);
+  }, [activeChat?.chatId]);
 
   // Fetch member names for the group header subtitle - not needed for direct chats,
   // which already show the peer's presence/typing status instead.
@@ -240,6 +248,19 @@ export function ChatView() {
     stopTypingNow();
     sendMessage(draft);
     setDraft("");
+  }
+
+  function handleEmojiSelect(emoji: string) {
+    const input = draftInputRef.current;
+    const start = input?.selectionStart ?? draft.length;
+    const end = input?.selectionEnd ?? draft.length;
+    const nextDraft = draft.slice(0, start) + emoji + draft.slice(end);
+    handleDraftChange(nextDraft);
+    requestAnimationFrame(() => {
+      input?.focus();
+      const cursor = start + emoji.length;
+      input?.setSelectionRange(cursor, cursor);
+    });
   }
 
   return (
@@ -325,7 +346,11 @@ export function ChatView() {
 
       <div className="flex items-center gap-2 bg-surface-gray px-5 py-4">
         <div className="relative w-full">
+          {showEmojiPicker && (
+            <EmojiPicker onSelect={handleEmojiSelect} onClose={() => setShowEmojiPicker(false)} />
+          )}
           <input
+            ref={draftInputRef}
             type="text"
             value={draft}
             onChange={(event) => handleDraftChange(event.target.value)}
@@ -333,8 +358,18 @@ export function ChatView() {
               if (event.key === "Enter") handleSend();
             }}
             placeholder="Type a message..."
-            className="w-full rounded-full bg-[#ffffff] py-3.5 pl-4 pr-11 text-sm text-ink placeholder:text-ink-muted focus:outline-none"
+            className="w-full rounded-full bg-[#ffffff] py-3.5 pl-4 pr-20 text-sm text-ink placeholder:text-ink-muted focus:outline-none"
           />
+          <button
+            type="button"
+            aria-label="Emoji"
+            onClick={() => setShowEmojiPicker((prev) => !prev)}
+            className={`absolute top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
+              draft.trim() ? "right-10" : "right-1.5"
+            } ${showEmojiPicker ? "text-primary" : "text-ink-muted hover:text-ink"}`}
+          >
+            <SmileIcon className="h-5 w-5" />
+          </button>
           {draft.trim() && (
             <button
               type="button"
