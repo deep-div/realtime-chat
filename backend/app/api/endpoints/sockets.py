@@ -22,6 +22,8 @@ from app.services.presence.schema import (
     CONNECTION_TTL_SECONDS,
     ClientHandshake,
     ConnectionRegistry,
+    PresenceStatus,
+    UserPresence,
 )
 from app.services.presence.store import presence_watcher_registry
 
@@ -80,6 +82,17 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
 
     local_connections[connection_id] = websocket
     logger.info(f"connection registered: {connection_id} user={handshake.user_id}")
+
+    # Mirror the disconnect path: push a live "online" update to anyone watching
+    # this user, instead of leaving them stuck showing "offline" until they
+    # manually re-fetch presence (e.g. by reloading the page).
+    online_presence = UserPresence(
+        user_id=handshake.user_id,
+        status=PresenceStatus.ONLINE,
+        last_seen=None,
+        updated_at=connected_at,
+    )
+    await notify_watchers(handshake.user_id, online_presence, local_connections)
 
     await websocket.send_json({
         "type": "handshake_ack",
