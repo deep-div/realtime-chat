@@ -57,6 +57,28 @@ async def notify_status(
             })
 
 
+async def notify_typing(
+    chat_id: str,
+    user_id: str,
+    is_typing: bool,
+    recipient_ids: list[str],
+    local_connections: dict[str, WebSocket],
+) -> None:
+    """Push a typing_update to a chat's other members, for whichever are connected to this process."""
+    payload = {
+        "event": "typing_update",
+        "chat_id": chat_id,
+        "user_id": user_id,
+        "is_typing": is_typing,
+    }
+    for recipient_id in recipient_ids:
+        connections = await connection_registry.get_connections_for_user(recipient_id)
+        for conn in connections:
+            socket = local_connections.get(conn.connection_id)
+            if socket is not None:
+                await _safe_send_json(socket, payload)
+
+
 async def deliver_message(
     session,
     chat_message: ChatMessage,

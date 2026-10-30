@@ -7,6 +7,7 @@ type IncomingEvent =
   | { event: "new_message"; message: ChatMessage }
   | { event: "presence"; users: UserPresence[] }
   | { event: "presence_update"; users: UserPresence[] }
+  | { event: "typing_update"; chat_id: string; user_id: string; is_typing: boolean }
   | { type: "message_status"; message_id?: string; status: string; message?: ChatMessage }
   | { type: "handshake_ack"; connection_id: string }
   | { type: "message_error"; client_message_id?: string; message_id?: string; error: string };
@@ -16,6 +17,7 @@ export interface ChatSocketHandlers {
   onMessageStatus: (payload: { messageId?: string; status: string; message?: ChatMessage }) => void;
   onMessageError: (payload: { clientMessageId?: string; messageId?: string; error: string }) => void;
   onPresence: (users: UserPresence[]) => void;
+  onTypingUpdate: (payload: { chatId: string; userId: string; isTyping: boolean }) => void;
   /** Fires after every successful handshake, including reconnects - re-subscribe presence here. */
   onConnected?: () => void;
 }
@@ -122,6 +124,14 @@ export class ChatSocket {
       });
       return;
     }
+    if ("event" in payload && payload.event === "typing_update") {
+      this.handlers.onTypingUpdate({
+        chatId: payload.chat_id,
+        userId: payload.user_id,
+        isTyping: payload.is_typing,
+      });
+      return;
+    }
     if ("type" in payload && payload.type === "message_error") {
       this.handlers.onMessageError({
         clientMessageId: payload.client_message_id,
@@ -184,6 +194,14 @@ export class ChatSocket {
   unsubscribePresence(userIds: string[]) {
     if (userIds.length === 0) return;
     this.send({ type: "unsubscribe_presence", user_ids: userIds });
+  }
+
+  startTyping(chatId: string) {
+    this.send({ type: "typing_start", chat_id: chatId });
+  }
+
+  stopTyping(chatId: string) {
+    this.send({ type: "typing_stop", chat_id: chatId });
   }
 
   disconnect() {

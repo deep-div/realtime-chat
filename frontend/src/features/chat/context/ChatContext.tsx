@@ -22,9 +22,11 @@ interface ChatContextValue {
   messages: ChatMessage[];
   isLoadingMessages: boolean;
   presenceByUserId: Record<string, UserPresence>;
+  typingByChatId: Record<string, boolean>;
   openChat: (chat: ChatSummary) => Promise<void>;
   startDirectChat: (peer: Profile) => Promise<void>;
   sendMessage: (text: string) => void;
+  setTyping: (chatId: string, isTyping: boolean) => void;
 }
 
 export const ChatContext = createContext<ChatContextValue | null>(null);
@@ -39,6 +41,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const [messagesByChatId, setMessagesByChatId] = useState<Record<string, ChatMessage[]>>({});
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [presenceByUserId, setPresenceByUserId] = useState<Record<string, UserPresence>>({});
+  const [typingByChatId, setTypingByChatId] = useState<Record<string, boolean>>({});
   const socketRef = useRef<ChatSocket | null>(null);
   const activeChatRef = useRef<ActiveChat | null>(null);
   const ackedMessageIdsRef = useRef<Set<string>>(new Set());
@@ -77,6 +80,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       setActiveChatAndRef(null);
       setMessagesByChatId({});
       setPresenceByUserId({});
+      setTypingByChatId({});
       historyLoadedChatIdsRef.current.clear();
       ackedMessageIdsRef.current.clear();
       subscribedPeerIdsRef.current.clear();
@@ -153,6 +157,9 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           for (const user of users) next[user.user_id] = user;
           return next;
         });
+      },
+      onTypingUpdate: ({ chatId, isTyping }) => {
+        setTypingByChatId((prev) => ({ ...prev, [chatId]: isTyping }));
       },
       onConnected: () => {
         // The backend's watcher list is keyed by connection id, so a reconnect
@@ -249,8 +256,14 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     await loadMessagesIfNeeded(chat.chat_id);
   }
 
+  function setTyping(chatId: string, isTyping: boolean) {
+    if (isTyping) socketRef.current?.startTyping(chatId);
+    else socketRef.current?.stopTyping(chatId);
+  }
+
   function sendMessage(text: string) {
     if (!activeChat || !text.trim()) return;
+    setTyping(activeChat.chatId, false);
     const clientMessageId = crypto.randomUUID();
     const now = Date.now();
 
@@ -302,11 +315,21 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       messages: activeChat ? messagesByChatId[activeChat.chatId] ?? [] : [],
       isLoadingMessages,
       presenceByUserId,
+      typingByChatId,
       openChat,
       startDirectChat,
       sendMessage,
+      setTyping,
     }),
-    [chats, isLoadingChats, activeChat, messagesByChatId, isLoadingMessages, presenceByUserId],
+    [
+      chats,
+      isLoadingChats,
+      activeChat,
+      messagesByChatId,
+      isLoadingMessages,
+      presenceByUserId,
+      typingByChatId,
+    ],
   );
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;

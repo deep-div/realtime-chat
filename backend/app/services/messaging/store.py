@@ -124,6 +124,24 @@ class MessageStore:
         members = await chat_store.list_members(session, chat_id)
         return [member.user_id for member in members if member.user_id != exclude_user_id]
 
+    async def verify_membership(
+        self, session: AsyncSession, chat_id: str, user_id: str
+    ) -> list[str]:
+        """Confirm user_id belongs to chat_id and return its other member ids.
+
+        Raises ChatNotFoundError / NotAMemberError, mirroring send_message's checks -
+        used to authorize ephemeral signals (e.g. typing) before broadcasting them.
+        """
+        chat = await chat_store.get_chat(session, chat_id)
+        if chat is None:
+            raise ChatNotFoundError(chat_id)
+
+        members = await chat_store.list_members(session, chat_id)
+        if not any(member.user_id == user_id for member in members):
+            raise NotAMemberError(user_id)
+
+        return [member.user_id for member in members if member.user_id != user_id]
+
     async def mark_read(
         self, session: AsyncSession, reader_id: str, chat_id: str, message_id: str
     ) -> None:

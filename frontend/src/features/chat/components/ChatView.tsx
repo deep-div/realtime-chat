@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowLeftIcon } from "../../../components/ui/ArrowLeftIcon";
 import { Avatar } from "../../../components/ui/Avatar";
 import { MessageStatusTicks } from "../../../components/ui/MessageStatusTicks";
@@ -33,6 +33,7 @@ function ComingSoonIconButton({
 }
 
 const SKELETON_BUBBLE_WIDTHS = ["w-40", "w-56", "w-32", "w-48"];
+const TYPING_STOP_DELAY_MS = 3000;
 
 function MessagesSkeleton() {
   return (
@@ -59,16 +60,68 @@ function formatLastSeen(lastSeen: number | null): string {
 
 export function ChatView() {
   const { profile } = useAuth();
-  const { activeChat, messages, isLoadingMessages, sendMessage, presenceByUserId } = useChat();
+  const { activeChat, messages, isLoadingMessages, sendMessage, presenceByUserId, typingByChatId, setTyping } =
+    useChat();
   const [draft, setDraft] = useState("");
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isTypingRef = useRef(false);
+
+  // Stop announcing typing when leaving this chat (switch or unmount), not just on send.
+  useEffect(() => {
+    const chatId = activeChat?.chatId;
+    return () => {
+      if (!chatId) return;
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = null;
+      }
+      if (isTypingRef.current) {
+        isTypingRef.current = false;
+        setTyping(chatId, false);
+      }
+    };
+  }, [activeChat?.chatId, setTyping]);
 
   if (!activeChat) return null;
 
   const presence = presenceByUserId[activeChat.peer.user_id];
-  const statusLine =
-    presence?.status === "online" ? "Online" : formatLastSeen(presence?.last_seen ?? null);
+  const isPeerTyping = !!typingByChatId[activeChat.chatId];
+  const statusLine = isPeerTyping
+    ? "typing..."
+    : presence?.status === "online"
+      ? "Online"
+      : formatLastSeen(presence?.last_seen ?? null);
+
+  function stopTypingNow() {
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = null;
+    }
+    if (isTypingRef.current) {
+      isTypingRef.current = false;
+      setTyping(activeChat.chatId, false);
+    }
+  }
+
+  function handleDraftChange(value: string) {
+    setDraft(value);
+
+    if (!value.trim()) {
+      stopTypingNow();
+      return;
+    }
+
+    if (!isTypingRef.current) {
+      isTypingRef.current = true;
+      setTyping(activeChat.chatId, true);
+    }
+
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = setTimeout(stopTypingNow, TYPING_STOP_DELAY_MS);
+  }
 
   function handleSend() {
+    stopTypingNow();
     sendMessage(draft);
     setDraft("");
   }
@@ -88,7 +141,11 @@ export function ChatView() {
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-ink">{activeChat.peer.display_name}</p>
-          <p className={`text-xs ${presence?.status === "online" ? "text-emerald-600" : "text-ink-muted"}`}>
+          <p
+            className={`text-xs ${
+              isPeerTyping || presence?.status === "online" ? "text-emerald-600" : "text-ink-muted"
+            } ${isPeerTyping ? "italic" : ""}`}
+          >
             {statusLine}
           </p>
         </div>
@@ -136,7 +193,7 @@ export function ChatView() {
           <input
             type="text"
             value={draft}
-            onChange={(event) => setDraft(event.target.value)}
+            onChange={(event) => handleDraftChange(event.target.value)}
             onKeyDown={(event) => {
               if (event.key === "Enter") handleSend();
             }}

@@ -8,14 +8,16 @@ from app.api.endpoints.connections import (
     deliver_backlog,
     deliver_message,
     notify_read,
+    notify_typing,
     notify_watchers,
 )
 from app.clients.postgre import AsyncSessionLocal
 from app.core.config import settings
 from app.core.logging import logger
 from app.services.chat.store import ChatNotFoundError, NotAMemberError
-from app.services.messaging.schema import MessageAck, MessageStatus, SendMessage
+from app.services.messaging.schema import MessageAck, MessageStatus, SendMessage, TypingSignal
 from app.services.messaging.store import MessageNotFoundError, message_store
+from app.services.messaging.typing import typing_tracker
 from app.services.presence.connection_registry import connection_registry
 from app.services.presence.store import presence_store
 from app.services.presence.schema import (
@@ -39,6 +41,16 @@ async def websocket_docs() -> dict:
 # Live WebSocket objects for connections on this process, keyed by connection_id.
 # Redis knows *that* a connection exists; only the process holding it can push to it.
 local_connections: dict[str, WebSocket] = {}
+
+
+async def _auto_stop_typing(chat_id: str, user_id: str) -> None:
+    """Force a typing_stop if a client never sent one, e.g. its tab crashed mid-type."""
+    async with AsyncSessionLocal() as session:
+        try:
+            recipient_ids = await message_store.verify_membership(session, chat_id, user_id)
+        except (ChatNotFoundError, NotAMemberError):
+            return
+    await notify_typing(chat_id, user_id, False, recipient_ids, local_connections)
 
 
 @router.websocket("/ws")
@@ -148,6 +160,24 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                             "message": chat_message.model_dump(mode="json"),
                         })
                         await deliver_message(session, chat_message, websocket, local_connections)
+            elif message.get("type") in ("typing_start", "typing_stop"):
+                signal = TypingSignal(**message)
+                is_typing = message["type"] == "typing_start"
+                async with AsyncSessionLocal() as session:
+                    try:
+                        recipient_ids = await message_store.verify_membership(
+                            session, signal.chat_id, handshake.user_id
+                        )
+                    except (ChatNotFoundError, NotAMemberError):
+                        continue
+
+                await notify_typing(
+                    signal.chat_id, handshake.user_id, is_typing, recipient_ids, local_connections
+                )
+                if is_typing:
+                    typing_tracker.start(signal.chat_id, handshake.user_id, _auto_stop_typing)
+                else:
+                    typing_tracker.stop(signal.chat_id, handshake.user_id)
             elif message.get("type") == "message_ack":
                 ack = MessageAck(**message)
                 async with AsyncSessionLocal() as session:
@@ -175,6 +205,15 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
     except WebSocketDisconnect:
         local_connections.pop(connection_id, None)
         await presence_watcher_registry.clear_connection(connection_id)
+
+        typing_chat_ids = typing_tracker.stop_all_for_user(handshake.user_id)
+        if typing_chat_ids:
+            async with AsyncSessionLocal() as session:
+                for chat_id in typing_chat_ids:
+                    recipient_ids = await message_store.get_recipient_ids(
+                        session, chat_id, handshake.user_id
+                    )
+                    await notify_typing(chat_id, handshake.user_id, False, recipient_ids, local_connections)
 
         offline_presence = await presence_store.handle_disconnect(connection_id, handshake.user_id)
         if offline_presence is not None:

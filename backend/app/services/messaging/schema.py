@@ -43,6 +43,12 @@ class ChatMessage(BaseModel):
     deleted_at: int | None = None
 
 
+class TypingSignal(BaseModel):
+    """Payload a client sends over the socket to start or stop typing in a chat."""
+
+    chat_id: str
+
+
 class MessageAck(BaseModel):
     """Sent by a client when it reads a message. Delivery is inferred server-side, not acked."""
 
