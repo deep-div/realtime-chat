@@ -23,7 +23,7 @@ export function AppLayout() {
           isProfileOpen={isEditingProfile}
         />
       )}
-      <div className="hidden w-[360px] shrink-0 bg-surface-gray px-3 py-0.5 md:flex">
+      <div className="hidden w-[360px] shrink-0 bg-surface-gray py-0.5 pl-3 pr-1.5 md:flex">
         <div className="flex min-h-0 w-full flex-1 overflow-hidden rounded-2xl bg-surface-cream shadow-sm">
           {user && isEditingProfile ? (
             <EditProfileView onBack={() => setIsEditingProfile(false)} />
@@ -32,7 +32,7 @@ export function AppLayout() {
           )}
         </div>
       </div>
-      <div className="flex min-w-0 flex-1 bg-surface-gray px-3 py-0.5">
+      <div className="flex min-w-0 flex-1 bg-surface-gray py-0.5 pl-1.5 pr-3">
         <div className="flex min-w-0 flex-1 overflow-hidden rounded-2xl bg-[#ffffff] shadow-sm">
           <MainPanel />
         </div>
