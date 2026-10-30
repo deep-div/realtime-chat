@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import time
 
+from pydantic import ValidationError
+
 from app.clients.redis import redis_client
 from app.core.logging import logger
 from app.services.presence.schema import (
@@ -81,7 +83,11 @@ class ConnectionRegistryRepository:
             return None
         if not data:
             return None
-        return self._to_model(data)
+        try:
+            return self._to_model(data)
+        except ValidationError:
+            logger.warning(f"dropping malformed connection registry entry: {connection_id}")
+            return None
 
     async def get_connections_for_user(self, user_id: str) -> list[ConnectionRegistry]:
         """Fetch all live connections for a user, pruning any that have expired.
@@ -109,7 +115,14 @@ class ConnectionRegistryRepository:
             if not data:
                 stale_ids.append(connection_id)
                 continue
-            connections.append(self._to_model(data))
+            try:
+                connections.append(self._to_model(data))
+            except ValidationError:
+                # Hash exists but is missing required fields (e.g. a partially-written or
+                # torn-down entry) - treat it like a stale connection rather than crashing
+                # the caller's whole socket loop over one corrupt record.
+                logger.warning(f"dropping malformed connection registry entry: {connection_id}")
+                stale_ids.append(connection_id)
 
         if stale_ids:
             try:
