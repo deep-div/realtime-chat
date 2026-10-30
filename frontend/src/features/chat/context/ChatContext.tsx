@@ -29,6 +29,7 @@ interface ChatContextValue {
   privateKey: CryptoKey | null;
   openChat: (chat: ChatSummary) => Promise<void>;
   closeChat: () => void;
+  removeChatFromList: (chatId: string) => void;
   startDirectChat: (peer: Profile) => Promise<void>;
   createGroupChat: (title: string, memberIds: string[]) => Promise<void>;
   sendMessage: (text: string) => void;
@@ -276,6 +277,13 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     setActiveChatAndRef(null);
   }
 
+  function removeChatFromList(chatId: string) {
+    setChats((prev) => prev.filter((c) => c.chat_id !== chatId));
+    if (activeChatRef.current?.chatId === chatId) {
+      setActiveChatAndRef(null);
+    }
+  }
+
   async function startDirectChat(peer: Profile) {
     // Get-or-create the chat row, but don't add it to the visible chat list yet - like
     // WhatsApp, a chat only shows up (on either side) once a message has actually been sent.
@@ -383,6 +391,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       privateKey,
       openChat,
       closeChat,
+      removeChatFromList,
       startDirectChat,
       createGroupChat,
       sendMessage,

@@ -28,3 +28,16 @@ export async function getChatMessages(chatId: string, limit = 50): Promise<ChatM
 export async function getChatMembers(chatId: string): Promise<ChatMemberProfile[]> {
   return apiFetch<ChatMemberProfile[]>(`/chats/${chatId}/members`);
 }
+
+export async function addChatMember(chatId: string, userId: string): Promise<ChatMemberProfile> {
+  return apiFetch<ChatMemberProfile>(`/chats/${chatId}/members`, {
+    method: "POST",
+    body: JSON.stringify({ user_id: userId }),
+  });
+}
+
+export async function removeChatMember(chatId: string, memberUserId: string): Promise<void> {
+  await apiFetch<void>(`/chats/${chatId}/members/${memberUserId}`, {
+    method: "DELETE",
+  });
+}

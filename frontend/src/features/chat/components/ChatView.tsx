@@ -9,7 +9,9 @@ import { Skeleton } from "../../../components/ui/Skeleton";
 import { SmileIcon } from "../../../components/ui/SmileIcon";
 import { VideoIcon } from "../../../components/ui/VideoIcon";
 import { useAuth } from "../../auth/hooks/useAuth";
-import { getChatMembers } from "../api";
+import { searchUsers } from "../../profile/api";
+import type { Profile } from "../../profile/types";
+import { addChatMember, getChatMembers, removeChatMember } from "../api";
 import { useDecryptedText } from "../hooks/useDecryptedText";
 import { useChat } from "../hooks/useChat";
 import type { ChatMemberProfile, ChatMessage } from "../types";
@@ -53,14 +55,81 @@ function GroupAvatarStack({ members, onClick }: { members: ChatMemberProfile[]; 
 }
 
 function GroupMembersModal({
+  chatId,
   members,
   currentUserId,
   onClose,
+  onMembersChanged,
+  onLeft,
 }: {
+  chatId: string;
   members: ChatMemberProfile[];
   currentUserId: string | undefined;
   onClose: () => void;
+  onMembersChanged: () => void;
+  onLeft: () => void;
 }) {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<Profile[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [pendingUserId, setPendingUserId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const currentMember = members.find((member) => member.user_id === currentUserId);
+  const canManageMembers = currentMember?.role === "owner" || currentMember?.role === "admin";
+  const memberIds = new Set(members.map((member) => member.user_id));
+
+  useEffect(() => {
+    const trimmed = query.trim();
+    if (!trimmed) {
+      setResults([]);
+      setIsSearching(false);
+      return;
+    }
+    setIsSearching(true);
+    const timeoutId = setTimeout(() => {
+      searchUsers(trimmed)
+        .then(setResults)
+        .catch(() => setResults([]))
+        .finally(() => setIsSearching(false));
+    }, 300);
+    return () => clearTimeout(timeoutId);
+  }, [query]);
+
+  async function handleAdd(user: Profile) {
+    setPendingUserId(user.user_id);
+    setError(null);
+    try {
+      await addChatMember(chatId, user.user_id);
+      setQuery("");
+      setResults([]);
+      onMembersChanged();
+    } catch {
+      setError("Couldn't add that user.");
+    } finally {
+      setPendingUserId(null);
+    }
+  }
+
+  async function handleRemove(member: ChatMemberProfile) {
+    setPendingUserId(member.user_id);
+    setError(null);
+    try {
+      await removeChatMember(chatId, member.user_id);
+      if (member.user_id === currentUserId) {
+        onLeft();
+      } else {
+        onMembersChanged();
+      }
+    } catch {
+      setError("Couldn't remove that member.");
+    } finally {
+      setPendingUserId(null);
+    }
+  }
+
+  const visibleResults = results.filter((user) => !memberIds.has(user.user_id));
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-ink/30 px-4"
@@ -81,24 +150,88 @@ function GroupMembersModal({
             ×
           </button>
         </div>
+
+        {canManageMembers && (
+          <div className="mb-3 flex items-center gap-2.5 rounded-full bg-surface-muted px-4 py-2.5">
+            <SearchIcon className="h-4 w-4 shrink-0 text-ink-muted" />
+            <input
+              type="text"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Add a member..."
+              className="w-full bg-transparent text-sm text-ink placeholder:text-ink-muted focus:outline-none"
+            />
+          </div>
+        )}
+
+        {error && <p className="mb-2 text-xs text-red-600">{error}</p>}
+
+        {query.trim() && canManageMembers && (
+          <div className="mb-3 max-h-40 space-y-0.5 overflow-y-auto scrollbar-hide">
+            {isSearching ? (
+              <p className="px-2 py-2 text-sm text-ink-muted">Searching...</p>
+            ) : visibleResults.length === 0 ? (
+              <p className="px-2 py-2 text-sm text-ink-muted">No users found.</p>
+            ) : (
+              visibleResults.map((user) => (
+                <button
+                  key={user.user_id}
+                  type="button"
+                  disabled={pendingUserId === user.user_id}
+                  onClick={() => handleAdd(user)}
+                  className="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition-colors hover:bg-surface-muted disabled:opacity-60"
+                >
+                  <Avatar src={user.avatar_url} label={user.display_name} className="h-9 w-9 shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-ink">{user.display_name}</p>
+                    <p className="truncate text-xs text-ink-muted">@{user.username}</p>
+                  </div>
+                  <span className="shrink-0 text-xs font-semibold text-primary">
+                    {pendingUserId === user.user_id ? "Adding..." : "Add"}
+                  </span>
+                </button>
+              ))
+            )}
+          </div>
+        )}
+
         <div className="max-h-80 space-y-1 overflow-y-auto scrollbar-hide">
-          {members.map((member) => (
-            <div key={member.user_id} className="flex items-center gap-3 rounded-xl px-2 py-2">
-              <Avatar
-                src={member.profile?.avatar_url}
-                label={member.profile?.display_name ?? "?"}
-                className="h-9 w-9"
-              />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-ink">
-                  {member.user_id === currentUserId ? "You" : member.profile?.display_name ?? "Unknown"}
-                </p>
-                {member.profile?.username && (
-                  <p className="truncate text-xs text-ink-muted">@{member.profile.username}</p>
+          {members.map((member) => {
+            const isSelf = member.user_id === currentUserId;
+            const canRemove = isSelf || (canManageMembers && member.role !== "owner");
+            return (
+              <div key={member.user_id} className="flex items-center gap-3 rounded-xl px-2 py-2">
+                <Avatar
+                  src={member.profile?.avatar_url}
+                  label={member.profile?.display_name ?? "?"}
+                  className="h-9 w-9"
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-ink">
+                    {isSelf ? "You" : member.profile?.display_name ?? "Unknown"}
+                    {member.role !== "member" && (
+                      <span className="ml-1.5 text-xs font-normal text-ink-muted">
+                        · {member.role}
+                      </span>
+                    )}
+                  </p>
+                  {member.profile?.username && (
+                    <p className="truncate text-xs text-ink-muted">@{member.profile.username}</p>
+                  )}
+                </div>
+                {canRemove && (
+                  <button
+                    type="button"
+                    disabled={pendingUserId === member.user_id}
+                    onClick={() => handleRemove(member)}
+                    className="shrink-0 text-xs font-semibold text-red-600 transition-opacity hover:opacity-80 disabled:opacity-60"
+                  >
+                    {pendingUserId === member.user_id ? "..." : isSelf ? "Leave" : "Remove"}
+                  </button>
                 )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>
@@ -198,6 +331,7 @@ export function ChatView() {
     setTyping,
     privateKey,
     closeChat,
+    removeChatFromList,
   } = useChat();
   const [draft, setDraft] = useState("");
   const [members, setMembers] = useState<ChatMemberProfile[]>([]);
@@ -247,6 +381,13 @@ export function ChatView() {
       cancelled = true;
     };
   }, [activeChat?.chatId, activeChat?.chatType]);
+
+  function refreshMembers() {
+    if (!activeChat || activeChat.chatType !== "group") return;
+    getChatMembers(activeChat.chatId)
+      .then(setMembers)
+      .catch(() => {});
+  }
 
   if (!activeChat) return null;
 
@@ -445,9 +586,15 @@ export function ChatView() {
 
       {showMembersModal && isGroup && (
         <GroupMembersModal
+          chatId={activeChat.chatId}
           members={members}
           currentUserId={profile?.user_id}
           onClose={() => setShowMembersModal(false)}
+          onMembersChanged={refreshMembers}
+          onLeft={() => {
+            setShowMembersModal(false);
+            removeChatFromList(activeChat.chatId);
+          }}
         />
       )}
     </div>
