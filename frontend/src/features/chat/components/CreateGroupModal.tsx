@@ -27,7 +27,7 @@ function ResultsSkeleton() {
 }
 
 export function CreateGroupModal({ isOpen, onClose }: CreateGroupModalProps) {
-  const { createGroupChat } = useChat();
+  const { chats, createGroupChat } = useChat();
   const [groupName, setGroupName] = useState("");
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Profile[]>([]);
@@ -85,7 +85,19 @@ export function CreateGroupModal({ isOpen, onClose }: CreateGroupModalProps) {
     }
   }
 
-  const visibleResults = results.filter(
+  // People you already have a direct chat with - the default list shown before searching,
+  // reusing the chat list we already have instead of a separate "contacts" API.
+  const existingConversations: Profile[] = [];
+  const seenUserIds = new Set<string>();
+  for (const chat of chats) {
+    if (chat.chat_type !== "direct" || !chat.peer || seenUserIds.has(chat.peer.user_id)) continue;
+    seenUserIds.add(chat.peer.user_id);
+    existingConversations.push(chat.peer);
+  }
+
+  const isSearchActive = query.trim().length > 0;
+  const candidates = isSearchActive ? results : existingConversations;
+  const visibleResults = candidates.filter(
     (user) => !selected.some((u) => u.user_id === user.user_id),
   );
 
@@ -128,11 +140,17 @@ export function CreateGroupModal({ isOpen, onClose }: CreateGroupModalProps) {
         />
       </div>
 
-      <div className="mt-2 max-h-56 space-y-0.5 overflow-y-auto scrollbar-hide">
+      {!isSearchActive && existingConversations.length > 0 && (
+        <p className="mt-3 px-0.5 text-xs font-medium text-ink-muted">Your conversations</p>
+      )}
+
+      <div className="mt-1.5 max-h-56 space-y-0.5 overflow-y-auto scrollbar-hide">
         {isSearching ? (
           <ResultsSkeleton />
-        ) : !query.trim() ? null : visibleResults.length === 0 ? (
-          <p className="px-2 py-2 text-sm text-ink-muted">No users found.</p>
+        ) : visibleResults.length === 0 ? (
+          <p className="px-2 py-2 text-sm text-ink-muted">
+            {isSearchActive ? "No users found." : "No conversations yet - search to add people."}
+          </p>
         ) : (
           visibleResults.map((user) => (
             <button

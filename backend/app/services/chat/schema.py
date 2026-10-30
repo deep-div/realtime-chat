@@ -31,6 +31,12 @@ class ChatMember(BaseModel):
     muted_until: int | None = None
 
 
+class ChatMemberWithProfile(ChatMember):
+    """A chat membership record with the member's profile attached, for member-list UIs."""
+
+    profile: User | None = None
+
+
 class Chat(BaseModel):
     """A conversation: either a 1:1 direct chat or a named group."""
 

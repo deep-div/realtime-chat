@@ -1,7 +1,7 @@
 interface PlusIconProps {
   className?: string;
 }
-
+ 
 export function PlusIcon({ className }: PlusIconProps) {
   return (
     <svg

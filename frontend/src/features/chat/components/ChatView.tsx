@@ -1,15 +1,49 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeftIcon } from "../../../components/ui/ArrowLeftIcon";
 import { Avatar } from "../../../components/ui/Avatar";
+import { DotsIcon } from "../../../components/ui/DotsIcon";
 import { MessageStatusTicks } from "../../../components/ui/MessageStatusTicks";
 import { PhoneIcon } from "../../../components/ui/PhoneIcon";
 import { SearchIcon } from "../../../components/ui/SearchIcon";
 import { Skeleton } from "../../../components/ui/Skeleton";
 import { VideoIcon } from "../../../components/ui/VideoIcon";
 import { useAuth } from "../../auth/hooks/useAuth";
+import { getChatMembers } from "../api";
 import { useDecryptedText } from "../hooks/useDecryptedText";
 import { useChat } from "../hooks/useChat";
-import type { ChatMessage } from "../types";
+import type { ChatMemberProfile, ChatMessage } from "../types";
+
+const AVATAR_STACK_VISIBLE_COUNT = 3;
+
+function GroupAvatarStack({ members }: { members: ChatMemberProfile[] }) {
+  if (members.length === 0) return null;
+
+  const visible = members.slice(0, AVATAR_STACK_VISIBLE_COUNT);
+
+  return (
+    <div className="flex shrink-0 items-center">
+      <div className="flex items-center">
+        {visible.map((member, index) => (
+          <div
+            key={member.user_id}
+            className="rounded-full ring-2 ring-surface"
+            style={{ marginLeft: index === 0 ? 0 : -10, zIndex: visible.length - index }}
+          >
+            <Avatar
+              src={member.profile?.avatar_url}
+              label={member.profile?.display_name ?? "?"}
+              className="h-8 w-8"
+              textClassName="text-xs"
+            />
+          </div>
+        ))}
+      </div>
+      <span className="ml-2 flex h-7 min-w-7 items-center justify-center rounded-full bg-primary-soft px-2 text-xs font-semibold text-primary">
+        {members.length}
+      </span>
+    </div>
+  );
+}
 
 function ComingSoonIconButton({
   label,
@@ -105,6 +139,7 @@ export function ChatView() {
     closeChat,
   } = useChat();
   const [draft, setDraft] = useState("");
+  const [members, setMembers] = useState<ChatMemberProfile[]>([]);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isTypingRef = useRef(false);
 
@@ -124,13 +159,40 @@ export function ChatView() {
     };
   }, [activeChat?.chatId, setTyping]);
 
+  // Fetch member names for the group header subtitle - not needed for direct chats,
+  // which already show the peer's presence/typing status instead.
+  useEffect(() => {
+    if (!activeChat || activeChat.chatType !== "group") {
+      setMembers([]);
+      return;
+    }
+    let cancelled = false;
+    getChatMembers(activeChat.chatId)
+      .then((result) => {
+        if (!cancelled) setMembers(result);
+      })
+      .catch(() => {
+        if (!cancelled) setMembers([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeChat?.chatId, activeChat?.chatType]);
+
   if (!activeChat) return null;
 
   const isGroup = activeChat.chatType === "group";
   const presence = activeChat.peer ? presenceByUserId[activeChat.peer.user_id] : undefined;
   const isPeerTyping = !!typingByChatId[activeChat.chatId];
+  const memberNamesLine = members.length
+    ? members
+        .map((member) =>
+          member.user_id === profile?.user_id ? "You" : member.profile?.display_name ?? "Unknown",
+        )
+        .join(", ")
+    : null;
   const statusLine = isGroup
-    ? "Group chat"
+    ? memberNamesLine ?? "Group chat"
     : isPeerTyping
       ? "typing..."
       : presence?.status === "online"
@@ -197,7 +259,7 @@ export function ChatView() {
             {isGroup ? activeChat.title ?? "Group chat" : activeChat.peer?.display_name}
           </p>
           <p
-            className={`text-xs ${
+            className={`truncate text-xs ${
               !isGroup && (isPeerTyping || presence?.status === "online") ? "text-emerald-600" : "text-ink-muted"
             } ${isPeerTyping ? "italic" : ""}`}
           >
@@ -205,15 +267,24 @@ export function ChatView() {
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-1">
-          <ComingSoonIconButton label="Search in chat">
-            <SearchIcon className="h-4.5 w-4.5 stroke-[2.5]" />
-          </ComingSoonIconButton>
+          {isGroup ? (
+            <GroupAvatarStack members={members} />
+          ) : (
+            <ComingSoonIconButton label="Search in chat">
+              <SearchIcon className="h-4.5 w-4.5 stroke-[2.5]" />
+            </ComingSoonIconButton>
+          )}
           <ComingSoonIconButton label="Voice call">
             <PhoneIcon className="h-4.5 w-4.5 stroke-[2.5]" />
           </ComingSoonIconButton>
           <ComingSoonIconButton label="Video call">
             <VideoIcon className="h-4.5 w-4.5 stroke-[2.5]" />
           </ComingSoonIconButton>
+          {isGroup && (
+            <ComingSoonIconButton label="More options">
+              <DotsIcon className="h-4.5 w-4.5" />
+            </ComingSoonIconButton>
+          )}
         </div>
       </div>
 

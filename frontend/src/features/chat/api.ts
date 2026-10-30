@@ -1,5 +1,5 @@
 import { apiFetch } from "../../lib/api/client";
-import type { ChatCreated, ChatMessage, ChatSummary } from "./types";
+import type { ChatCreated, ChatMemberProfile, ChatMessage, ChatSummary } from "./types";
 
 export async function createDirectChat(recipientId: string): Promise<ChatCreated> {
   return apiFetch<ChatCreated>("/chats", {
@@ -23,4 +23,8 @@ export async function listMyChats(limit = 50, before?: number): Promise<ChatSumm
 
 export async function getChatMessages(chatId: string, limit = 50): Promise<ChatMessage[]> {
   return apiFetch<ChatMessage[]>(`/chats/${chatId}/messages?limit=${limit}`);
+}
+
+export async function getChatMembers(chatId: string): Promise<ChatMemberProfile[]> {
+  return apiFetch<ChatMemberProfile[]>(`/chats/${chatId}/members`);
 }

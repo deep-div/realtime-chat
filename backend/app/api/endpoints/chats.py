@@ -11,6 +11,7 @@ from app.services.chat.schema import (
     Chat,
     ChatCreated,
     ChatMember,
+    ChatMemberWithProfile,
     ChatSummary,
     CreateDirectChat,
     CreateGroupChat,
@@ -95,17 +96,25 @@ async def get_chat(
     return chat
 
 
-@router.get("/{chat_id}/members", response_model=list[ChatMember])
+@router.get("/{chat_id}/members", response_model=list[ChatMemberWithProfile])
 async def get_chat_members(
     chat_id: str,
     user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
-) -> list[ChatMember]:
-    """List every member of a chat. 404s if the caller isn't a member."""
+) -> list[ChatMemberWithProfile]:
+    """List every member of a chat, with their profile attached. 404s if the caller isn't a member."""
     members = await chat_store.list_members(db, chat_id)
     if not any(member.user_id == user_id for member in members):
         raise HTTPException(status_code=404, detail="chat not found")
-    return members
+
+    profiles_by_id = {
+        profile.user_id: profile
+        for profile in await user_store.get_profiles(db, [member.user_id for member in members])
+    }
+    return [
+        ChatMemberWithProfile(**member.model_dump(), profile=profiles_by_id.get(member.user_id))
+        for member in members
+    ]
 
 
 @router.get("/{chat_id}/messages", response_model=list[ChatMessage])

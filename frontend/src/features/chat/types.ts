@@ -44,6 +44,15 @@ export interface ChatMessage {
   localStatus?: MessageDeliveryStatus;
 }
 
+export interface ChatMemberProfile {
+  chat_id: string;
+  user_id: string;
+  role: "owner" | "admin" | "member";
+  joined_at: number;
+  muted_until: number | null;
+  profile: Profile | null;
+}
+
 export interface ActiveChat {
   chatId: string;
   chatType: ChatType;
