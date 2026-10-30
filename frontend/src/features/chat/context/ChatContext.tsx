@@ -87,6 +87,14 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           return { ...prev, [message.chat_id]: [...existing, message] };
         });
         ackIfActiveChat(message.chat_id, [message]);
+        // A message can arrive for a chat we don't have yet - e.g. someone messaged us
+        // for the first time, or we were offline and this is a backlog delivery. Refetch
+        // the list so it shows up with its peer info instead of being silently dropped.
+        setChats((prev) => {
+          if (prev.some((c) => c.chat_id === message.chat_id)) return prev;
+          listMyChats().then(setChats);
+          return prev;
+        });
       },
       onMessageStatus: ({ messageId, status, message }) => {
         setMessagesByChatId((prev) => {
