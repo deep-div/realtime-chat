@@ -1,10 +1,28 @@
 from fastapi import WebSocket
+from starlette.websockets import WebSocketDisconnect
 
+from app.core.logging import logger
 from app.services.messaging.schema import ChatMessage, MessageStatus
 from app.services.messaging.store import message_store
 from app.services.presence.connection_registry import connection_registry
 from app.services.presence.schema import UserPresence
 from app.services.presence.store import presence_watcher_registry
+
+
+async def _safe_send_json(socket: WebSocket, payload: dict) -> bool:
+    """Send to a socket that may have closed concurrently; never raise.
+
+    local_connections is only pruned by each connection's own disconnect handler,
+    so a socket that is mid-close (another request just sent its close frame but
+    hasn't run its cleanup yet) can still be present here. Treat a closed/dead
+    socket as a missed delivery instead of letting it crash the caller's task.
+    """
+    try:
+        await socket.send_json(payload)
+    except (WebSocketDisconnect, RuntimeError):
+        logger.info("skipped push to a socket that was already closing")
+        return False
+    return True
 
 
 async def notify_watchers(
@@ -18,7 +36,7 @@ async def notify_watchers(
     for watcher_id in watcher_ids:
         watcher_socket = local_connections.get(watcher_id)
         if watcher_socket is not None:
-            await watcher_socket.send_json(payload)
+            await _safe_send_json(watcher_socket, payload)
 
 
 async def notify_status(
@@ -32,7 +50,7 @@ async def notify_status(
     for conn in connections:
         socket = local_connections.get(conn.connection_id)
         if socket is not None:
-            await socket.send_json({
+            await _safe_send_json(socket, {
                 "type": "message_status",
                 "message_id": message_id,
                 "status": status.value,
@@ -57,19 +75,20 @@ async def deliver_message(
         for conn in connections:
             recipient_socket = local_connections.get(conn.connection_id)
             if recipient_socket is not None:
-                await recipient_socket.send_json({
+                sent = await _safe_send_json(recipient_socket, {
                     "event": "new_message",
                     "message": chat_message.model_dump(mode="json"),
                 })
-                delivered = True
-                recipient_delivered = True
+                if sent:
+                    delivered = True
+                    recipient_delivered = True
 
         if recipient_delivered:
             await message_store.mark_delivered(session, recipient_id, [chat_message])
 
     if delivered:
         # Grey double tick: delivered to at least one recipient's device, not yet read.
-        await sender_socket.send_json({
+        await _safe_send_json(sender_socket, {
             "type": "message_status",
             "message_id": chat_message.message_id,
             "status": MessageStatus.DELIVERED.value,
