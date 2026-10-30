@@ -62,12 +62,15 @@ async def list_my_chats(
 
     result = []
     for chat, peer_id in pairs:
-        last_message, last_message_at, unread_count = previews.get(chat.chat_id, (None, None, 0))
+        last_message, last_message_scheme, last_message_at, unread_count = previews.get(
+            chat.chat_id, (None, None, None, 0)
+        )
         result.append(
             ChatSummary(
                 **chat.model_dump(),
                 peer=profiles_by_id.get(peer_id) if peer_id else None,
                 last_message=last_message,
+                last_message_scheme=last_message_scheme,
                 last_message_at=last_message_at,
                 unread_count=unread_count,
             )

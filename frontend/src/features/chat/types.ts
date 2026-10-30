@@ -19,6 +19,7 @@ export interface ChatCreated extends Chat {
 export interface ChatSummary extends Chat {
   peer: Profile | null;
   last_message: string | null;
+  last_message_scheme: string | null;
   last_message_at: number | null;
   unread_count: number;
 }

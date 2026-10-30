@@ -51,5 +51,12 @@ class User(BaseModel):
     status: str | None = None
     avatar_url: str | None = None
     email: str | None = None
+    public_key: str | None = None
     created_at: int
     updated_at: int
+
+
+class SetPublicKey(BaseModel):
+    """Request body for PUT /users/me/public-key: the client's base64-encoded ECDH public key."""
+
+    public_key: str = Field(min_length=1)

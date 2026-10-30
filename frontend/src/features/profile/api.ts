@@ -46,3 +46,11 @@ export async function removeMyAvatar(): Promise<Profile> {
     method: "DELETE",
   });
 }
+
+/** Uploads this device's E2E encryption public key, so peers can derive a shared key with us. */
+export async function updateMyPublicKey(publicKey: string): Promise<Profile> {
+  return apiFetch<Profile>("/users/me/public-key", {
+    method: "PUT",
+    body: JSON.stringify({ public_key: publicKey }),
+  });
+}

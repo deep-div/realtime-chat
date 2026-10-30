@@ -7,7 +7,9 @@ import { SearchIcon } from "../../../components/ui/SearchIcon";
 import { Skeleton } from "../../../components/ui/Skeleton";
 import { VideoIcon } from "../../../components/ui/VideoIcon";
 import { useAuth } from "../../auth/hooks/useAuth";
+import { useDecryptedText } from "../hooks/useDecryptedText";
 import { useChat } from "../hooks/useChat";
+import type { ChatMessage } from "../types";
 
 function ComingSoonIconButton({
   label,
@@ -47,6 +49,37 @@ function MessagesSkeleton() {
   );
 }
 
+function MessageBubble({
+  message,
+  isMine,
+  privateKey,
+  peerPublicKey,
+}: {
+  message: ChatMessage;
+  isMine: boolean;
+  privateKey: CryptoKey | null;
+  peerPublicKey: string | null | undefined;
+}) {
+  const text = useDecryptedText(message.content, privateKey, peerPublicKey);
+
+  return (
+    <div className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
+      <div
+        className={`max-w-[70%] rounded-2xl px-4 py-2 text-sm shadow-sm ${
+          isMine ? "bg-primary text-primary-foreground" : "bg-surface text-ink"
+        }`}
+      >
+        <p>{text}</p>
+        {isMine && (
+          <div className="mt-1 flex justify-end">
+            <MessageStatusTicks status={message.localStatus} className="h-3.5 w-3.5 opacity-80" />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function formatLastSeen(lastSeen: number | null): string {
   if (!lastSeen) return "offline";
   const diffMs = Date.now() - lastSeen;
@@ -60,8 +93,16 @@ function formatLastSeen(lastSeen: number | null): string {
 
 export function ChatView() {
   const { profile } = useAuth();
-  const { activeChat, messages, isLoadingMessages, sendMessage, presenceByUserId, typingByChatId, setTyping } =
-    useChat();
+  const {
+    activeChat,
+    messages,
+    isLoadingMessages,
+    sendMessage,
+    presenceByUserId,
+    typingByChatId,
+    setTyping,
+    privateKey,
+  } = useChat();
   const [draft, setDraft] = useState("");
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isTypingRef = useRef(false);
@@ -166,25 +207,15 @@ export function ChatView() {
         {isLoadingMessages ? (
           <MessagesSkeleton />
         ) : (
-          messages.map((message) => {
-            const isMine = message.sender_id === profile?.user_id;
-            return (
-              <div key={message.message_id} className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
-                <div
-                  className={`max-w-[70%] rounded-2xl px-4 py-2 text-sm shadow-sm ${
-                    isMine ? "bg-primary text-primary-foreground" : "bg-surface text-ink"
-                  }`}
-                >
-                  <p>{message.content.ciphertext}</p>
-                  {isMine && (
-                    <div className="mt-1 flex justify-end">
-                      <MessageStatusTicks status={message.localStatus} className="h-3.5 w-3.5 opacity-80" />
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })
+          messages.map((message) => (
+            <MessageBubble
+              key={message.message_id}
+              message={message}
+              isMine={message.sender_id === profile?.user_id}
+              privateKey={privateKey}
+              peerPublicKey={activeChat.peer.public_key}
+            />
+          ))
         )}
       </div>
 

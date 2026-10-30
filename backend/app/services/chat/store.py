@@ -389,24 +389,29 @@ class ChatStore:
 
     async def get_chat_previews(
         self, session: AsyncSession, user_id: str, chat_ids: list[str]
-    ) -> dict[str, tuple[str | None, int | None, int]]:
-        """Fetch each chat's latest message text/timestamp and the caller's unread count.
+    ) -> dict[str, tuple[str | None, str | None, int | None, int]]:
+        """Fetch each chat's latest message text/scheme/timestamp and the caller's unread count.
 
-        Returns chat_id -> (last_message, last_message_at, unread_count). A chat with no
-        messages (shouldn't happen for chats returned by list_my_chats_with_peer_ids, which
-        already filters those out) or that isn't in chat_ids is simply absent from the dict.
+        Returns chat_id -> (last_message, last_message_scheme, last_message_at, unread_count).
+        The scheme travels alongside the ciphertext so a client can tell whether it's able to
+        decrypt the preview. A chat with no messages (shouldn't happen for chats returned by
+        list_my_chats_with_peer_ids, which already filters those out) or that isn't in chat_ids
+        is simply absent from the dict.
         """
         if not chat_ids:
             return {}
 
         latest_result = await session.execute(
-            select(MessageModel.chat_id, MessageModel.ciphertext, MessageModel.sent_at)
+            select(
+                MessageModel.chat_id, MessageModel.ciphertext, MessageModel.scheme, MessageModel.sent_at
+            )
             .distinct(MessageModel.chat_id)
             .where(MessageModel.chat_id.in_(chat_ids))
             .order_by(MessageModel.chat_id, MessageModel.sent_at.desc())
         )
         previews = {
-            chat_id: (ciphertext, sent_at) for chat_id, ciphertext, sent_at in latest_result.all()
+            chat_id: (ciphertext, scheme, sent_at)
+            for chat_id, ciphertext, scheme, sent_at in latest_result.all()
         }
 
         has_read_receipt = (
@@ -430,8 +435,8 @@ class ChatStore:
         unread_counts = dict(unread_result.all())
 
         return {
-            chat_id: (ciphertext, sent_at, unread_counts.get(chat_id, 0))
-            for chat_id, (ciphertext, sent_at) in previews.items()
+            chat_id: (ciphertext, scheme, sent_at, unread_counts.get(chat_id, 0))
+            for chat_id, (ciphertext, scheme, sent_at) in previews.items()
         }
 
     async def _get_direct_chat_by_pair(

@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user, get_current_user_id
 from app.clients.postgre import get_db
 from app.clients.storage import upload_avatar
-from app.services.users.schema import CreateProfile, UpdateProfile, User
+from app.services.users.schema import CreateProfile, SetPublicKey, UpdateProfile, User
 from app.services.users.store import (
     ProfileAlreadyExistsError,
     ProfileNotFoundError,
@@ -58,6 +58,19 @@ async def update_my_profile(
         raise HTTPException(status_code=404, detail="profile not found")
     except UsernameTakenError:
         raise HTTPException(status_code=409, detail="username is already taken")
+
+
+@router.put("/me/public-key", response_model=User)
+async def set_my_public_key(
+    request: SetPublicKey,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> User:
+    """Set the requesting user's E2E encryption public key, for peers to derive a shared key."""
+    try:
+        return await user_store.set_public_key(db, user_id, request.public_key)
+    except ProfileNotFoundError:
+        raise HTTPException(status_code=404, detail="profile not found")
 
 
 @router.get("/search", response_model=list[User])

@@ -133,6 +133,22 @@ class UserStore:
         await self._cache_profile(user)
         return user
 
+    async def set_public_key(
+        self, session: AsyncSession, user_id: str, public_key: str
+    ) -> User:
+        """Set a user's E2E encryption public key. Raises if the user has no profile yet."""
+        row = await session.get(UserModel, user_id)
+        if row is None:
+            raise ProfileNotFoundError(user_id)
+
+        row.public_key = public_key
+        row.updated_at = int(time.time() * 1000)
+        await session.commit()
+
+        user = self._row_to_user(row)
+        await self._cache_profile(user)
+        return user
+
     async def search_users(
         self, session: AsyncSession, query: str, exclude_user_id: str, limit: int = 20
     ) -> list[User]:
@@ -161,6 +177,7 @@ class UserStore:
             status=row.status,
             avatar_url=row.avatar_url,
             email=row.email,
+            public_key=row.public_key,
             created_at=row.created_at,
             updated_at=row.updated_at,
         )

@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { useAuth } from "../../features/auth/hooks/useAuth";
 import { AuthModal } from "../../features/auth/components/AuthModal";
 import { useChat } from "../../features/chat/hooks/useChat";
+import { useDecryptedText } from "../../features/chat/hooks/useDecryptedText";
+import type { ChatSummary } from "../../features/chat/types";
 import { searchUsers } from "../../features/profile/api";
 import type { Profile } from "../../features/profile/types";
 import { Avatar } from "../ui/Avatar";
@@ -41,6 +43,16 @@ function formatChatTimestamp(timestamp: number): string {
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
+function ChatPreviewText({ chat, privateKey }: { chat: ChatSummary; privateKey: CryptoKey | null }) {
+  const content =
+    chat.last_message !== null
+      ? { scheme: chat.last_message_scheme ?? "plaintext-v0", ciphertext: chat.last_message }
+      : null;
+  const text = useDecryptedText(content, privateKey, chat.peer?.public_key);
+
+  return <>{content ? text : chat.peer ? `@${chat.peer.username}` : ""}</>;
+}
+
 function ChatListSkeleton() {
   return (
     <div className="space-y-1">
@@ -63,7 +75,8 @@ interface SidebarProps {
 
 export function Sidebar({ focusSearch = false }: SidebarProps) {
   const { user } = useAuth();
-  const { chats, isLoadingChats, activeChat, openChat, startDirectChat, presenceByUserId } = useChat();
+  const { chats, isLoadingChats, activeChat, openChat, startDirectChat, presenceByUserId, privateKey } =
+    useChat();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Profile[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -255,7 +268,7 @@ export function Sidebar({ focusSearch = false }: SidebarProps) {
                       </div>
                       <div className="flex items-center justify-between gap-2">
                         <p className="truncate text-xs text-ink-muted">
-                          {chat.last_message ?? (chat.peer ? `@${chat.peer.username}` : "")}
+                          <ChatPreviewText chat={chat} privateKey={privateKey} />
                         </p>
                         {chat.unread_count > 0 && (
                           <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-semibold text-primary-foreground">

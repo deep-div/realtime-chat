@@ -9,10 +9,12 @@ import {
 import { useAuth } from "../../auth/hooks/useAuth";
 import type { Profile } from "../../profile/types";
 import { createDirectChat, getChatMessages, listMyChats } from "../api";
+import { encryptForPeer } from "../crypto";
+import { useIdentityPrivateKey } from "../hooks/useIdentityKey";
 import { ChatSocket } from "../socket";
 import type { ActiveChat, ChatMessage, ChatSummary, UserPresence } from "../types";
 
-/** No real end-to-end encryption yet - placeholder scheme until key exchange is designed. */
+/** Used only when the peer has no public key uploaded yet - see encryptForPeer. */
 const PLACEHOLDER_SCHEME = "plaintext-v0";
 
 interface ChatContextValue {
@@ -23,6 +25,7 @@ interface ChatContextValue {
   isLoadingMessages: boolean;
   presenceByUserId: Record<string, UserPresence>;
   typingByChatId: Record<string, boolean>;
+  privateKey: CryptoKey | null;
   openChat: (chat: ChatSummary) => Promise<void>;
   startDirectChat: (peer: Profile) => Promise<void>;
   sendMessage: (text: string) => void;
@@ -33,6 +36,7 @@ export const ChatContext = createContext<ChatContextValue | null>(null);
 
 export function ChatProvider({ children }: { children: ReactNode }) {
   const { user, profile } = useAuth();
+  const privateKey = useIdentityPrivateKey();
   const [chats, setChats] = useState<ChatSummary[]>([]);
   // Starts true so the sidebar shows a loading skeleton instead of flashing
   // "no conversations" before the initial GET /chats has even been fired.
@@ -123,6 +127,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           const updated: ChatSummary = {
             ...existing,
             last_message: message.content.ciphertext,
+            last_message_scheme: message.content.scheme,
             last_message_at: message.sent_at,
             unread_count: isOwnMessage || isActive ? existing.unread_count : existing.unread_count + 1,
           };
@@ -261,7 +266,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     else socketRef.current?.stopTyping(chatId);
   }
 
-  function sendMessage(text: string) {
+  async function sendMessage(text: string) {
     if (!activeChat || !text.trim()) return;
     setTyping(activeChat.chatId, false);
     const clientMessageId = crypto.randomUUID();
@@ -273,6 +278,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       sender_id: profile?.user_id ?? "",
       sent_at: now,
       client_message_id: clientMessageId,
+      // Optimistic bubble shows the plaintext we just typed immediately - no need to
+      // wait on the real encrypt below, which only matters for what goes over the wire.
       content: { scheme: PLACEHOLDER_SCHEME, ciphertext: text },
       edited_at: null,
       deleted_at: null,
@@ -287,7 +294,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     setChats((prev) => {
       const existing = prev.find((c) => c.chat_id === activeChat.chatId);
       const updated: ChatSummary = existing
-        ? { ...existing, last_message: text, last_message_at: now }
+        ? { ...existing, last_message: text, last_message_scheme: PLACEHOLDER_SCHEME, last_message_at: now }
         : {
             chat_id: activeChat.chatId,
             chat_type: "direct",
@@ -297,6 +304,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
             created_at: now,
             peer: activeChat.peer,
             last_message: text,
+            last_message_scheme: PLACEHOLDER_SCHEME,
             last_message_at: now,
             unread_count: 0,
           };
@@ -304,7 +312,16 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       return [updated, ...rest];
     });
 
-    socketRef.current?.sendMessage(activeChat.chatId, clientMessageId, text, PLACEHOLDER_SCHEME);
+    const encrypted = privateKey
+      ? await encryptForPeer(privateKey, activeChat.peer.public_key, text)
+      : { scheme: PLACEHOLDER_SCHEME, ciphertext: text };
+
+    socketRef.current?.sendMessage(
+      activeChat.chatId,
+      clientMessageId,
+      encrypted.ciphertext,
+      encrypted.scheme,
+    );
   }
 
   const value = useMemo<ChatContextValue>(
@@ -316,6 +333,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       isLoadingMessages,
       presenceByUserId,
       typingByChatId,
+      privateKey,
       openChat,
       startDirectChat,
       sendMessage,
@@ -328,6 +346,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       messagesByChatId,
       isLoadingMessages,
       presenceByUserId,
+      privateKey,
       typingByChatId,
     ],
   );
