@@ -8,7 +8,7 @@ import {
 } from "react";
 import { useAuth } from "../../auth/hooks/useAuth";
 import type { Profile } from "../../profile/types";
-import { createDirectChat, getChatMessages, listMyChats } from "../api";
+import { createDirectChat, createGroupChat as createGroupChatApi, getChatMessages, listMyChats } from "../api";
 import { encryptForPeer } from "../crypto";
 import { useIdentityPrivateKey } from "../hooks/useIdentityKey";
 import { ChatSocket } from "../socket";
@@ -29,6 +29,7 @@ interface ChatContextValue {
   openChat: (chat: ChatSummary) => Promise<void>;
   closeChat: () => void;
   startDirectChat: (peer: Profile) => Promise<void>;
+  createGroupChat: (title: string, memberIds: string[]) => Promise<void>;
   sendMessage: (text: string) => void;
   setTyping: (chatId: string, isTyping: boolean) => void;
 }
@@ -173,7 +174,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         // re-subscribe to everyone we currently care about.
         const peerIds = new Set<string>();
         for (const chat of chatsRef.current) if (chat.peer) peerIds.add(chat.peer.user_id);
-        if (activeChatRef.current) peerIds.add(activeChatRef.current.peer.user_id);
+        if (activeChatRef.current?.peer) peerIds.add(activeChatRef.current.peer.user_id);
         subscribedPeerIdsRef.current = peerIds;
         if (peerIds.size > 0) {
           const ids = [...peerIds];
@@ -207,7 +208,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const peerIds = new Set<string>();
     for (const chat of chats) if (chat.peer) peerIds.add(chat.peer.user_id);
-    if (activeChat) peerIds.add(activeChat.peer.user_id);
+    if (activeChat?.peer) peerIds.add(activeChat.peer.user_id);
 
     const previouslySubscribed = subscribedPeerIdsRef.current;
     const added = [...peerIds].filter((id) => !previouslySubscribed.has(id));
@@ -246,8 +247,13 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   }
 
   async function openChat(chat: ChatSummary) {
-    if (!chat.peer) return;
-    setActiveChatAndRef({ chatId: chat.chat_id, peer: chat.peer });
+    if (chat.chat_type === "direct" && !chat.peer) return;
+    setActiveChatAndRef({
+      chatId: chat.chat_id,
+      chatType: chat.chat_type,
+      peer: chat.peer,
+      title: chat.title,
+    });
     setChats((prev) =>
       prev.map((c) => (c.chat_id === chat.chat_id ? { ...c, unread_count: 0 } : c)),
     );
@@ -262,7 +268,27 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     // Get-or-create the chat row, but don't add it to the visible chat list yet - like
     // WhatsApp, a chat only shows up (on either side) once a message has actually been sent.
     const chat = await createDirectChat(peer.user_id);
-    setActiveChatAndRef({ chatId: chat.chat_id, peer });
+    setActiveChatAndRef({ chatId: chat.chat_id, chatType: "direct", peer, title: null });
+    await loadMessagesIfNeeded(chat.chat_id);
+  }
+
+  async function createGroupChat(title: string, memberIds: string[]) {
+    const chat = await createGroupChatApi(title, memberIds);
+    const summary: ChatSummary = {
+      chat_id: chat.chat_id,
+      chat_type: "group",
+      title: chat.title,
+      avatar_media_id: null,
+      created_by: profile?.user_id ?? "",
+      created_at: chat.created_at,
+      peer: null,
+      last_message: null,
+      last_message_scheme: null,
+      last_message_at: null,
+      unread_count: 0,
+    };
+    setChats((prev) => [summary, ...prev.filter((c) => c.chat_id !== chat.chat_id)]);
+    setActiveChatAndRef({ chatId: chat.chat_id, chatType: "group", peer: null, title: chat.title });
     await loadMessagesIfNeeded(chat.chat_id);
   }
 
@@ -302,8 +328,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         ? { ...existing, last_message: text, last_message_scheme: PLACEHOLDER_SCHEME, last_message_at: now }
         : {
             chat_id: activeChat.chatId,
-            chat_type: "direct",
-            title: null,
+            chat_type: activeChat.chatType,
+            title: activeChat.title,
             avatar_media_id: null,
             created_by: profile?.user_id ?? "",
             created_at: now,
@@ -317,8 +343,11 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       return [updated, ...rest];
     });
 
+    // Group chats have no single peer to derive a pairwise shared key from, so they're
+    // sent as plaintext for now - encryptForPeer already falls back to that when given
+    // no peer key, same as a direct-chat peer who hasn't uploaded a public key yet.
     const encrypted = privateKey
-      ? await encryptForPeer(privateKey, activeChat.peer.public_key, text)
+      ? await encryptForPeer(privateKey, activeChat.peer?.public_key, text)
       : { scheme: PLACEHOLDER_SCHEME, ciphertext: text };
 
     socketRef.current?.sendMessage(
@@ -342,6 +371,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       openChat,
       closeChat,
       startDirectChat,
+      createGroupChat,
       sendMessage,
       setTyping,
     }),

@@ -46,7 +46,11 @@ export interface ChatMessage {
 
 export interface ActiveChat {
   chatId: string;
-  peer: Profile;
+  chatType: ChatType;
+  /** Set for direct chats; null for groups (and E2E crypto is pairwise-only, so group
+   * messages are currently sent/read as plaintext rather than per-member encrypted). */
+  peer: Profile | null;
+  title: string | null;
 }
 
 export type PresenceStatus = "online" | "offline";

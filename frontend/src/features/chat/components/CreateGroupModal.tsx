@@ -1,51 +1,97 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Avatar } from "../../../components/ui/Avatar";
 import { Button } from "../../../components/ui/Button";
 import { Modal } from "../../../components/ui/Modal";
 import { SearchIcon } from "../../../components/ui/SearchIcon";
+import { Skeleton } from "../../../components/ui/Skeleton";
+import { searchUsers } from "../../profile/api";
+import type { Profile } from "../../profile/types";
+import { useChat } from "../hooks/useChat";
 
 interface CreateGroupModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-/** Placeholder contact list - no backend wiring yet, just UI for picking group members. */
-const DUMMY_CONTACTS = [
-  "Ananya Sharma",
-  "Liam Carter",
-  "Priya Verma",
-  "Noah Williams",
-  "Sophia Kapoor",
-  "Arjun Mehta",
-  "Olivia Bennett",
-];
+function ResultsSkeleton() {
+  return (
+    <div className="space-y-1">
+      {Array.from({ length: 3 }).map((_, index) => (
+        <div key={index} className="flex items-center gap-3 px-2 py-2">
+          <Skeleton className="h-9 w-9 shrink-0 rounded-full" />
+          <Skeleton className="h-3 w-2/5" />
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export function CreateGroupModal({ isOpen, onClose }: CreateGroupModalProps) {
+  const { createGroupChat } = useChat();
   const [groupName, setGroupName] = useState("");
   const [query, setQuery] = useState("");
-  const [selected, setSelected] = useState<string[]>([]);
+  const [results, setResults] = useState<Profile[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [selected, setSelected] = useState<Profile[]>([]);
+  const [isCreating, setIsCreating] = useState(false);
 
-  const contacts = DUMMY_CONTACTS.filter((name) =>
-    name.toLowerCase().includes(query.trim().toLowerCase()),
-  );
+  useEffect(() => {
+    const trimmed = query.trim();
+    if (!trimmed) {
+      setResults([]);
+      setIsSearching(false);
+      return;
+    }
 
-  function toggleContact(name: string) {
+    setIsSearching(true);
+    const timeoutId = setTimeout(() => {
+      searchUsers(trimmed)
+        .then(setResults)
+        .catch(() => setResults([]))
+        .finally(() => setIsSearching(false));
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [query]);
+
+  function toggleContact(user: Profile) {
     setSelected((prev) =>
-      prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name],
+      prev.some((u) => u.user_id === user.user_id)
+        ? prev.filter((u) => u.user_id !== user.user_id)
+        : [...prev, user],
     );
   }
 
-  function handleClose() {
+  function resetAndClose() {
     setGroupName("");
     setQuery("");
+    setResults([]);
     setSelected([]);
+    setIsCreating(false);
     onClose();
   }
 
+  async function handleCreate() {
+    if (!groupName.trim() || selected.length === 0 || isCreating) return;
+    setIsCreating(true);
+    try {
+      await createGroupChat(
+        groupName.trim(),
+        selected.map((u) => u.user_id),
+      );
+      resetAndClose();
+    } catch {
+      setIsCreating(false);
+    }
+  }
+
+  const visibleResults = results.filter(
+    (user) => !selected.some((u) => u.user_id === user.user_id),
+  );
+
   return (
-    <Modal isOpen={isOpen} onClose={handleClose}>
+    <Modal isOpen={isOpen} onClose={resetAndClose}>
       <h2 className="text-lg font-semibold text-ink">New group</h2>
-      <p className="mt-0.5 text-xs text-ink-muted">UI preview only - not wired up yet.</p>
 
       <input
         type="text"
@@ -55,62 +101,63 @@ export function CreateGroupModal({ isOpen, onClose }: CreateGroupModalProps) {
         className="mt-4 w-full rounded-xl bg-surface-muted px-4 py-2.5 text-sm text-ink placeholder:text-ink-muted focus:outline-none"
       />
 
+      {selected.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {selected.map((user) => (
+            <button
+              key={user.user_id}
+              type="button"
+              onClick={() => toggleContact(user)}
+              className="flex items-center gap-1.5 rounded-full bg-primary-soft px-2.5 py-1 text-xs font-medium text-primary"
+            >
+              {user.display_name}
+              <span aria-hidden="true">&times;</span>
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="mt-3 flex items-center gap-2.5 rounded-full bg-surface-muted px-4 py-2.5">
         <SearchIcon className="h-4 w-4 shrink-0 text-ink-muted" />
         <input
           type="text"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search people..."
+          placeholder="Search people to add..."
           className="w-full bg-transparent text-sm text-ink placeholder:text-ink-muted focus:outline-none"
         />
       </div>
 
-      {selected.length > 0 && (
-        <p className="mt-3 text-xs text-ink-muted">{selected.length} selected</p>
-      )}
-
-      <div className="mt-2 max-h-64 space-y-0.5 overflow-y-auto scrollbar-hide">
-        {contacts.map((name) => {
-          const isSelected = selected.includes(name);
-          return (
+      <div className="mt-2 max-h-56 space-y-0.5 overflow-y-auto scrollbar-hide">
+        {isSearching ? (
+          <ResultsSkeleton />
+        ) : !query.trim() ? null : visibleResults.length === 0 ? (
+          <p className="px-2 py-2 text-sm text-ink-muted">No users found.</p>
+        ) : (
+          visibleResults.map((user) => (
             <button
-              key={name}
+              key={user.user_id}
               type="button"
-              onClick={() => toggleContact(name)}
+              onClick={() => toggleContact(user)}
               className="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition-colors hover:bg-surface-muted"
             >
-              <Avatar label={name} className="h-9 w-9 shrink-0" />
-              <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink">{name}</span>
-              <span
-                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${
-                  isSelected ? "border-primary bg-primary" : "border-border"
-                }`}
-              >
-                {isSelected && (
-                  <svg viewBox="0 0 24 24" fill="none" className="h-3 w-3 text-primary-foreground">
-                    <path
-                      d="M5 12l5 5L19 7"
-                      stroke="currentColor"
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                )}
-              </span>
+              <Avatar src={user.avatar_url} label={user.display_name} className="h-9 w-9 shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium text-ink">{user.display_name}</p>
+                <p className="truncate text-xs text-ink-muted">@{user.username}</p>
+              </div>
             </button>
-          );
-        })}
+          ))
+        )}
       </div>
 
       <Button
         type="button"
-        disabled={!groupName.trim() || selected.length === 0}
-        onClick={handleClose}
+        disabled={!groupName.trim() || selected.length === 0 || isCreating}
+        onClick={handleCreate}
         className="mt-4 w-full"
       >
-        Create group
+        {isCreating ? "Creating..." : "Create group"}
       </Button>
     </Modal>
   );

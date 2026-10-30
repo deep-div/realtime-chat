@@ -126,13 +126,16 @@ export function ChatView() {
 
   if (!activeChat) return null;
 
-  const presence = presenceByUserId[activeChat.peer.user_id];
+  const isGroup = activeChat.chatType === "group";
+  const presence = activeChat.peer ? presenceByUserId[activeChat.peer.user_id] : undefined;
   const isPeerTyping = !!typingByChatId[activeChat.chatId];
-  const statusLine = isPeerTyping
-    ? "typing..."
-    : presence?.status === "online"
-      ? "Online"
-      : formatLastSeen(presence?.last_seen ?? null);
+  const statusLine = isGroup
+    ? "Group chat"
+    : isPeerTyping
+      ? "typing..."
+      : presence?.status === "online"
+        ? "Online"
+        : formatLastSeen(presence?.last_seen ?? null);
 
   function stopTypingNow() {
     if (typingTimeoutRef.current) {
@@ -181,19 +184,21 @@ export function ChatView() {
         </button>
         <div className="relative shrink-0">
           <Avatar
-            src={activeChat.peer.avatar_url}
-            label={activeChat.peer.display_name}
+            src={isGroup ? null : activeChat.peer?.avatar_url}
+            label={isGroup ? activeChat.title ?? "Group" : activeChat.peer?.display_name ?? "?"}
             className="h-9 w-9"
           />
-          {presence?.status === "online" && (
+          {!isGroup && presence?.status === "online" && (
             <span className="absolute bottom-0 right-0 h-2 w-2 rounded-full border-2 border-surface bg-emerald-500" />
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-ink">{activeChat.peer.display_name}</p>
+          <p className="text-sm font-semibold text-ink">
+            {isGroup ? activeChat.title ?? "Group chat" : activeChat.peer?.display_name}
+          </p>
           <p
             className={`text-xs ${
-              isPeerTyping || presence?.status === "online" ? "text-emerald-600" : "text-ink-muted"
+              !isGroup && (isPeerTyping || presence?.status === "online") ? "text-emerald-600" : "text-ink-muted"
             } ${isPeerTyping ? "italic" : ""}`}
           >
             {statusLine}
@@ -222,7 +227,7 @@ export function ChatView() {
               message={message}
               isMine={message.sender_id === profile?.user_id}
               privateKey={privateKey}
-              peerPublicKey={activeChat.peer.public_key}
+              peerPublicKey={activeChat.peer?.public_key}
             />
           ))
         )}

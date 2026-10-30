@@ -52,7 +52,9 @@ function ChatPreviewText({ chat, privateKey }: { chat: ChatSummary; privateKey: 
       : null;
   const text = useDecryptedText(content, privateKey, chat.peer?.public_key);
 
-  return <>{content ? text : chat.peer ? `@${chat.peer.username}` : ""}</>;
+  if (content) return <>{text}</>;
+  if (chat.chat_type === "group") return <>No messages yet</>;
+  return <>{chat.peer ? `@${chat.peer.username}` : ""}</>;
 }
 
 function ChatListSkeleton() {
@@ -249,15 +251,15 @@ export function Sidebar({ focusSearch = false }: SidebarProps) {
                     key={chat.chat_id}
                     type="button"
                     onClick={() => openChat(chat)}
-                    disabled={!chat.peer}
+                    disabled={chat.chat_type === "direct" && !chat.peer}
                     className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-surface-muted ${
                       activeChat?.chatId === chat.chat_id ? "bg-surface-muted" : ""
                     }`}
                   >
                     <div className="relative shrink-0">
                       <Avatar
-                        src={chat.peer?.avatar_url}
-                        label={chat.peer?.display_name ?? "?"}
+                        src={chat.chat_type === "group" ? null : chat.peer?.avatar_url}
+                        label={chat.chat_type === "group" ? chat.title ?? "Group" : chat.peer?.display_name ?? "?"}
                         className="h-10 w-10"
                       />
                       {chat.peer && presenceByUserId[chat.peer.user_id]?.status === "online" && (
@@ -267,7 +269,9 @@ export function Sidebar({ focusSearch = false }: SidebarProps) {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2">
                         <p className="truncate text-sm font-medium text-ink">
-                          {chat.peer?.display_name ?? "Unknown user"}
+                          {chat.chat_type === "group"
+                            ? chat.title ?? "Group chat"
+                            : chat.peer?.display_name ?? "Unknown user"}
                         </p>
                         {chat.last_message_at && (
                           <span

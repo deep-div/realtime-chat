@@ -8,6 +8,13 @@ export async function createDirectChat(recipientId: string): Promise<ChatCreated
   });
 }
 
+export async function createGroupChat(title: string, memberIds: string[]): Promise<ChatCreated> {
+  return apiFetch<ChatCreated>("/chats", {
+    method: "POST",
+    body: JSON.stringify({ chat_type: "group", title, member_ids: memberIds }),
+  });
+}
+
 export async function listMyChats(limit = 50, before?: number): Promise<ChatSummary[]> {
   const params = new URLSearchParams({ limit: String(limit) });
   if (before !== undefined) params.set("before", String(before));
