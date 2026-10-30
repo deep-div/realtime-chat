@@ -188,6 +188,14 @@ export function ChatView() {
         )}
       </div>
 
+      {isPeerTyping && (
+        <div className="flex items-center gap-1 bg-surface-gray px-5 pt-1">
+          <span className="h-1 w-1 animate-bounce rounded-full bg-ink-muted [animation-delay:-0.3s]" />
+          <span className="h-1 w-1 animate-bounce rounded-full bg-ink-muted [animation-delay:-0.15s]" />
+          <span className="h-1 w-1 animate-bounce rounded-full bg-ink-muted" />
+        </div>
+      )}
+
       <div className="flex items-center gap-2 bg-surface-gray px-5 py-4">
         <div className="relative w-full">
           <input
