@@ -11,7 +11,7 @@ export function AppLayout() {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-surface">
+    <div className="flex h-screen w-screen overflow-hidden bg-[#ffffff]">
       {user && (
         <NavRail
           activeView={activeView}
@@ -23,19 +23,15 @@ export function AppLayout() {
           isProfileOpen={isEditingProfile}
         />
       )}
-      <div className="hidden w-[360px] shrink-0 bg-surface-gray py-0.5 pl-3 pr-1.5 md:flex">
-        <div className="flex min-h-0 w-full flex-1 overflow-hidden rounded-2xl bg-surface-cream shadow-sm">
-          {user && isEditingProfile ? (
-            <EditProfileView onBack={() => setIsEditingProfile(false)} />
-          ) : (
-            <Sidebar focusSearch={activeView === "people"} />
-          )}
-        </div>
+      <div className="hidden w-[360px] shrink-0 border-r border-ink/10 bg-surface-cream md:flex">
+        {user && isEditingProfile ? (
+          <EditProfileView onBack={() => setIsEditingProfile(false)} />
+        ) : (
+          <Sidebar focusSearch={activeView === "people"} />
+        )}
       </div>
-      <div className="flex min-w-0 flex-1 bg-surface-gray py-0.5 pl-1.5 pr-3">
-        <div className="flex min-w-0 flex-1 overflow-hidden rounded-2xl bg-[#ffffff] shadow-sm">
-          <MainPanel />
-        </div>
+      <div className="flex min-w-0 flex-1 bg-[#ffffff]">
+        <MainPanel />
       </div>
     </div>
   );
