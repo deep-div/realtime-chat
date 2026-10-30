@@ -8,7 +8,7 @@ export function AuthLanding() {
 
   return (
     <div className="flex flex-col items-center gap-2 px-6 text-center">
-      <img src={heroImage} alt="" className="h-64 w-[36rem] object-contain" />
+      <img src={heroImage} alt="" className="h-64 w-full max-w-[36rem] object-contain" />
 
       <h1 className="mt-3 text-[1.75rem] font-bold tracking-tight text-ink">
         Messenger

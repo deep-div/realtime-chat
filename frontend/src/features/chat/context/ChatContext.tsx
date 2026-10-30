@@ -27,6 +27,7 @@ interface ChatContextValue {
   typingByChatId: Record<string, boolean>;
   privateKey: CryptoKey | null;
   openChat: (chat: ChatSummary) => Promise<void>;
+  closeChat: () => void;
   startDirectChat: (peer: Profile) => Promise<void>;
   sendMessage: (text: string) => void;
   setTyping: (chatId: string, isTyping: boolean) => void;
@@ -253,6 +254,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     await loadMessagesIfNeeded(chat.chat_id);
   }
 
+  function closeChat() {
+    setActiveChatAndRef(null);
+  }
+
   async function startDirectChat(peer: Profile) {
     // Get-or-create the chat row, but don't add it to the visible chat list yet - like
     // WhatsApp, a chat only shows up (on either side) once a message has actually been sent.
@@ -335,6 +340,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       typingByChatId,
       privateKey,
       openChat,
+      closeChat,
       startDirectChat,
       sendMessage,
       setTyping,

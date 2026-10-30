@@ -26,7 +26,7 @@ export function Modal({ isOpen, onClose, children }: ModalProps) {
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-2xl bg-surface p-8 shadow-2xl"
+        className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl bg-surface p-8 shadow-2xl"
         onClick={(event) => event.stopPropagation()}
       >
         {children}

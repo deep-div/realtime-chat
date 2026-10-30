@@ -102,6 +102,7 @@ export function ChatView() {
     typingByChatId,
     setTyping,
     privateKey,
+    closeChat,
   } = useChat();
   const [draft, setDraft] = useState("");
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -170,6 +171,14 @@ export function ChatView() {
   return (
     <div className="flex h-full w-full flex-col">
       <div className="flex items-center gap-3 border-b border-border px-5 py-4">
+        <button
+          type="button"
+          aria-label="Back to chats"
+          onClick={closeChat}
+          className="-ml-1.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-ink transition-colors hover:bg-surface-muted md:hidden"
+        >
+          <ArrowLeftIcon className="h-4.5 w-4.5 stroke-[2.5]" />
+        </button>
         <div className="relative shrink-0">
           <Avatar
             src={activeChat.peer.avatar_url}
