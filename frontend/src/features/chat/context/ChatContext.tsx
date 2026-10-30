@@ -67,6 +67,14 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     if (!user || !profile) {
       setChats([]);
       setIsLoadingChats(false);
+      // Clear out the previous session's chat state so a logged-out MainPanel
+      // doesn't keep rendering a stale ChatView from before the logout.
+      setActiveChatAndRef(null);
+      setMessagesByChatId({});
+      setPresenceByUserId({});
+      historyLoadedChatIdsRef.current.clear();
+      ackedMessageIdsRef.current.clear();
+      subscribedPeerIdsRef.current.clear();
       return;
     }
 

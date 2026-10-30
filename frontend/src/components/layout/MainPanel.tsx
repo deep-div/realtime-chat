@@ -18,7 +18,7 @@ export function MainPanel() {
     return <ChatPlaceholder />;
   }
 
-  if (activeChat) {
+  if (user && activeChat) {
     return (
       <main className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-[#ffffff]">
         <ChatView />
