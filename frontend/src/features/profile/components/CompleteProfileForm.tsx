@@ -1,9 +1,9 @@
 import { type ChangeEvent, type FormEvent, useRef, useState } from "react";
 import { Avatar } from "../../../components/ui/Avatar";
 import { Button } from "../../../components/ui/Button";
-import { CameraIcon } from "../../../components/ui/CameraIcon";
 import { Input } from "../../../components/ui/Input";
 import { LogOutIcon } from "../../../components/ui/LogOutIcon";
+import { PencilIcon } from "../../../components/ui/PencilIcon";
 import { ApiError } from "../../../lib/api/client";
 import { useAuth } from "../../auth/hooks/useAuth";
 import { createMyProfile, uploadMyAvatar } from "../api";
@@ -100,7 +100,7 @@ export function CompleteProfileForm() {
               onClick={() => fileInputRef.current?.click()}
               className="absolute bottom-0 right-0 flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md shadow-primary/40 ring-2 ring-surface transition-transform hover:scale-105 active:scale-95"
             >
-              <CameraIcon className="h-4.5 w-4.5" />
+              <PencilIcon className="h-4 w-4" />
             </button>
             <input
               ref={fileInputRef}
@@ -115,7 +115,7 @@ export function CompleteProfileForm() {
             <Input
               id="username"
               label="Username"
-              placeholder="riya_sharma"
+              placeholder="username"
               value={username}
               onChange={(event) => setUsername(event.target.value)}
               minLength={3}
@@ -125,7 +125,7 @@ export function CompleteProfileForm() {
             <Input
               id="display-name"
               label="Display name"
-              placeholder="Riya Sharma"
+              placeholder="Your name"
               value={displayName}
               onChange={(event) => setDisplayName(event.target.value)}
               minLength={1}
