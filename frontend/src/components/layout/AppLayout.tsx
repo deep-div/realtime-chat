@@ -9,7 +9,6 @@ import { Sidebar } from "./Sidebar";
 export function AppLayout() {
   const { user } = useAuth();
   const { activeChat } = useChat();
-  const [activeView, setActiveView] = useState<"chats" | "people">("chats");
   const [isEditingProfile, setIsEditingProfile] = useState(false);
 
   // On mobile there's only room for one pane: the chat list (+ nav rail) or the
@@ -21,11 +20,6 @@ export function AppLayout() {
       {user && (
         <div className={`${showListPane ? "flex" : "hidden"} md:flex`}>
           <NavRail
-            activeView={activeView}
-            onSelectView={(view) => {
-              setActiveView(view);
-              setIsEditingProfile(false);
-            }}
             onOpenProfile={() => setIsEditingProfile(true)}
             isProfileOpen={isEditingProfile}
           />
@@ -39,7 +33,7 @@ export function AppLayout() {
         {user && isEditingProfile ? (
           <EditProfileView onBack={() => setIsEditingProfile(false)} />
         ) : (
-          <Sidebar focusSearch={activeView === "people"} />
+          <Sidebar />
         )}
       </div>
       <div className={`min-w-0 flex-1 bg-[#ffffff] ${showListPane ? "hidden" : "flex"} md:flex`}>

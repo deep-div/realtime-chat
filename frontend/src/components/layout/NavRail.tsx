@@ -1,16 +1,13 @@
 import { useAuth } from "../../features/auth/hooks/useAuth";
 import { Avatar } from "../ui/Avatar";
 import { ChatBubbleIcon } from "../ui/ChatBubbleIcon";
-import { UsersIcon } from "../ui/UsersIcon";
 
 interface NavRailProps {
-  activeView: "chats" | "people";
-  onSelectView: (view: "chats" | "people") => void;
   onOpenProfile: () => void;
   isProfileOpen: boolean;
 }
 
-export function NavRail({ activeView, onSelectView, onOpenProfile, isProfileOpen }: NavRailProps) {
+export function NavRail({ onOpenProfile, isProfileOpen }: NavRailProps) {
   const { profile } = useAuth();
 
   return (
@@ -19,27 +16,13 @@ export function NavRail({ activeView, onSelectView, onOpenProfile, isProfileOpen
         <button
           type="button"
           aria-label="Chats"
-          onClick={() => onSelectView("chats")}
           className={`flex h-11 w-11 items-center justify-center rounded-xl transition-colors ${
-            activeView === "chats" && !isProfileOpen
+            !isProfileOpen
               ? "bg-primary text-primary-foreground shadow-md shadow-primary/30"
               : "text-ink-muted hover:bg-surface-muted hover:text-ink"
           }`}
         >
           <ChatBubbleIcon className="h-5.5 w-5.5" />
-        </button>
-
-        <button
-          type="button"
-          aria-label="People"
-          onClick={() => onSelectView("people")}
-          className={`flex h-11 w-11 items-center justify-center rounded-xl transition-colors ${
-            activeView === "people" && !isProfileOpen
-              ? "bg-primary text-primary-foreground shadow-md shadow-primary/30"
-              : "text-ink-muted hover:bg-surface-muted hover:text-ink"
-          }`}
-        >
-          <UsersIcon className="h-5.5 w-5.5" />
         </button>
       </nav>
 
