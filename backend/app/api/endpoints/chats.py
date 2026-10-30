@@ -58,10 +58,21 @@ async def list_my_chats(
         profile.user_id: profile for profile in await user_store.get_profiles(db, list(peer_ids))
     }
 
-    return [
-        ChatSummary(**chat.model_dump(), peer=profiles_by_id.get(peer_id) if peer_id else None)
-        for chat, peer_id in pairs
-    ]
+    previews = await chat_store.get_chat_previews(db, user_id, [chat.chat_id for chat, _ in pairs])
+
+    result = []
+    for chat, peer_id in pairs:
+        last_message, last_message_at, unread_count = previews.get(chat.chat_id, (None, None, 0))
+        result.append(
+            ChatSummary(
+                **chat.model_dump(),
+                peer=profiles_by_id.get(peer_id) if peer_id else None,
+                last_message=last_message,
+                last_message_at=last_message_at,
+                unread_count=unread_count,
+            )
+        )
+    return result
 
 
 @router.get("/{chat_id}", response_model=Chat)

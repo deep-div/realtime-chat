@@ -99,13 +99,26 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           return { ...prev, [message.chat_id]: [...existing, message] };
         });
         ackIfActiveChat(message.chat_id, [message]);
-        // A message can arrive for a chat we don't have yet - e.g. someone messaged us
-        // for the first time, or we were offline and this is a backlog delivery. Refetch
-        // the list so it shows up with its peer info instead of being silently dropped.
         setChats((prev) => {
-          if (prev.some((c) => c.chat_id === message.chat_id)) return prev;
-          listMyChats().then(setChats);
-          return prev;
+          const existing = prev.find((c) => c.chat_id === message.chat_id);
+          if (!existing) {
+            // A message can arrive for a chat we don't have yet - e.g. someone messaged
+            // us for the first time, or we were offline and this is a backlog delivery.
+            // Refetch the list so it shows up with its peer info instead of being
+            // silently dropped.
+            listMyChats().then(setChats);
+            return prev;
+          }
+          const isActive = activeChatRef.current?.chatId === message.chat_id;
+          const isOwnMessage = message.sender_id === profile?.user_id;
+          const updated: ChatSummary = {
+            ...existing,
+            last_message: message.content.ciphertext,
+            last_message_at: message.sent_at,
+            unread_count: isOwnMessage || isActive ? existing.unread_count : existing.unread_count + 1,
+          };
+          const rest = prev.filter((c) => c.chat_id !== message.chat_id);
+          return [updated, ...rest];
         });
       },
       onMessageStatus: ({ messageId, status, message }) => {
@@ -203,6 +216,9 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   async function openChat(chat: ChatSummary) {
     if (!chat.peer) return;
     setActiveChatAndRef({ chatId: chat.chat_id, peer: chat.peer });
+    setChats((prev) =>
+      prev.map((c) => (c.chat_id === chat.chat_id ? { ...c, unread_count: 0 } : c)),
+    );
     await loadMessagesIfNeeded(chat.chat_id);
   }
 
@@ -236,22 +252,25 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       [activeChat.chatId]: [...(prev[activeChat.chatId] ?? []), optimisticMessage],
     }));
 
-    setChats((prev) =>
-      prev.some((c) => c.chat_id === activeChat.chatId)
-        ? prev
-        : [
-            {
-              chat_id: activeChat.chatId,
-              chat_type: "direct",
-              title: null,
-              avatar_media_id: null,
-              created_by: profile?.user_id ?? "",
-              created_at: now,
-              peer: activeChat.peer,
-            },
-            ...prev,
-          ],
-    );
+    setChats((prev) => {
+      const existing = prev.find((c) => c.chat_id === activeChat.chatId);
+      const updated: ChatSummary = existing
+        ? { ...existing, last_message: text, last_message_at: now }
+        : {
+            chat_id: activeChat.chatId,
+            chat_type: "direct",
+            title: null,
+            avatar_media_id: null,
+            created_by: profile?.user_id ?? "",
+            created_at: now,
+            peer: activeChat.peer,
+            last_message: text,
+            last_message_at: now,
+            unread_count: 0,
+          };
+      const rest = prev.filter((c) => c.chat_id !== activeChat.chatId);
+      return [updated, ...rest];
+    });
 
     socketRef.current?.sendMessage(activeChat.chatId, clientMessageId, text, PLACEHOLDER_SCHEME);
   }

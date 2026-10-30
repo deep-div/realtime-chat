@@ -3,14 +3,14 @@ from __future__ import annotations
 import time
 import uuid
 
-from sqlalchemy import exists, select
+from sqlalchemy import exists, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.clients.redis import redis_client
 from app.core.logging import logger
 from app.services.chat.models import ChatMemberModel, ChatModel
-from app.services.messaging.models import MessageModel
+from app.services.messaging.models import MessageModel, MessageReceiptModel
 from app.services.chat.schema import (
     Chat,
     ChatCreated,
@@ -386,6 +386,53 @@ class ChatStore:
                 peer_id = row.direct_user_max if row.direct_user_min == user_id else row.direct_user_min
             pairs.append((self._row_to_chat(row), peer_id))
         return pairs
+
+    async def get_chat_previews(
+        self, session: AsyncSession, user_id: str, chat_ids: list[str]
+    ) -> dict[str, tuple[str | None, int | None, int]]:
+        """Fetch each chat's latest message text/timestamp and the caller's unread count.
+
+        Returns chat_id -> (last_message, last_message_at, unread_count). A chat with no
+        messages (shouldn't happen for chats returned by list_my_chats_with_peer_ids, which
+        already filters those out) or that isn't in chat_ids is simply absent from the dict.
+        """
+        if not chat_ids:
+            return {}
+
+        latest_result = await session.execute(
+            select(MessageModel.chat_id, MessageModel.ciphertext, MessageModel.sent_at)
+            .distinct(MessageModel.chat_id)
+            .where(MessageModel.chat_id.in_(chat_ids))
+            .order_by(MessageModel.chat_id, MessageModel.sent_at.desc())
+        )
+        previews = {
+            chat_id: (ciphertext, sent_at) for chat_id, ciphertext, sent_at in latest_result.all()
+        }
+
+        has_read_receipt = (
+            select(MessageReceiptModel.message_id)
+            .where(
+                MessageReceiptModel.message_id == MessageModel.message_id,
+                MessageReceiptModel.user_id == user_id,
+                MessageReceiptModel.status == "read",
+            )
+            .exists()
+        )
+        unread_result = await session.execute(
+            select(MessageModel.chat_id, func.count())
+            .where(
+                MessageModel.chat_id.in_(chat_ids),
+                MessageModel.sender_id != user_id,
+                ~has_read_receipt,
+            )
+            .group_by(MessageModel.chat_id)
+        )
+        unread_counts = dict(unread_result.all())
+
+        return {
+            chat_id: (ciphertext, sent_at, unread_counts.get(chat_id, 0))
+            for chat_id, (ciphertext, sent_at) in previews.items()
+        }
 
     async def _get_direct_chat_by_pair(
         self, session: AsyncSession, user_min: str, user_max: str

@@ -28,6 +28,19 @@ const SUGGESTED_PEOPLE = [
   { name: "Olivia Bennett", username: "oliviab", avatar: person7 },
 ];
 
+function formatChatTimestamp(timestamp: number): string {
+  const date = new Date(timestamp);
+  const now = new Date();
+  const isToday = date.toDateString() === now.toDateString();
+  if (isToday) {
+    return date.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  }
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  if (date.toDateString() === yesterday.toDateString()) return "Yesterday";
+  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
 function ChatListSkeleton() {
   return (
     <div className="space-y-1">
@@ -225,13 +238,31 @@ export function Sidebar({ focusSearch = false }: SidebarProps) {
                         <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-surface bg-emerald-500" />
                       )}
                     </div>
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-ink">
-                        {chat.peer?.display_name ?? "Unknown user"}
-                      </p>
-                      {chat.peer && (
-                        <p className="truncate text-xs text-ink-muted">@{chat.peer.username}</p>
-                      )}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="truncate text-sm font-medium text-ink">
+                          {chat.peer?.display_name ?? "Unknown user"}
+                        </p>
+                        {chat.last_message_at && (
+                          <span
+                            className={`shrink-0 text-[11px] ${
+                              chat.unread_count > 0 ? "font-semibold text-primary" : "text-ink-muted"
+                            }`}
+                          >
+                            {formatChatTimestamp(chat.last_message_at)}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="truncate text-xs text-ink-muted">
+                          {chat.last_message ?? (chat.peer ? `@${chat.peer.username}` : "")}
+                        </p>
+                        {chat.unread_count > 0 && (
+                          <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-semibold text-primary-foreground">
+                            {chat.unread_count > 99 ? "99+" : chat.unread_count}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </button>
                 ))

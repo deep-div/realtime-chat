@@ -49,6 +49,9 @@ class ChatSummary(Chat):
     """
 
     peer: User | None = None
+    last_message: str | None = None
+    last_message_at: int | None = None
+    unread_count: int = 0
 
 
 class CreateDirectChat(BaseModel):
