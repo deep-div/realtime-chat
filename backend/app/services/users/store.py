@@ -51,7 +51,7 @@ class UserStore:
             logger.warning("profile cache invalidation failed", exc_info=True)
 
     async def create_profile(
-        self, session: AsyncSession, user_id: str, request: CreateProfile
+        self, session: AsyncSession, user_id: str, request: CreateProfile, email: str | None = None
     ) -> User:
         """Create a new user's profile. Raises if the user already has one or the username is taken."""
         existing = await session.get(UserModel, user_id)
@@ -65,6 +65,7 @@ class UserStore:
             display_name=request.display_name,
             bio=request.bio,
             status=request.status,
+            email=email,
             created_at=now,
             updated_at=now,
         )
@@ -159,6 +160,7 @@ class UserStore:
             bio=row.bio,
             status=row.status,
             avatar_url=row.avatar_url,
+            email=row.email,
             created_at=row.created_at,
             updated_at=row.updated_at,
         )

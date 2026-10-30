@@ -7,12 +7,12 @@ from app.core.config import settings
 bearer_scheme = HTTPBearer(auto_error=not settings.DISABLE_AUTH)
 
 
-def get_current_user_id(
+def get_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
-) -> str:
-    """Verify the Firebase ID token from the Authorization header and return the caller's uid."""
+) -> dict:
+    """Verify the Firebase ID token from the Authorization header and return the caller's uid and email."""
     if settings.DISABLE_AUTH:
-        return settings.DEV_USER_ID
+        return {"uid": settings.DEV_USER_ID, "email": settings.DEV_USER_EMAIL}
 
     try:
         decoded = firebase_auth.verify_id_token(credentials.credentials)
@@ -22,4 +22,9 @@ def get_current_user_id(
     if not decoded.get("email_verified", False):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="email not verified")
 
-    return decoded["uid"]
+    return {"uid": decoded["uid"], "email": decoded.get("email")}
+
+
+def get_current_user_id(user: dict = Depends(get_current_user)) -> str:
+    """Return just the caller's uid, for endpoints that don't need the email."""
+    return user["uid"]

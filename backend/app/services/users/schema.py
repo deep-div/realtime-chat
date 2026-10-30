@@ -50,5 +50,6 @@ class User(BaseModel):
     bio: str | None = None
     status: str | None = None
     avatar_url: str | None = None
+    email: str | None = None
     created_at: int
     updated_at: int

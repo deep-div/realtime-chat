@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     FIREBASE_CREDENTIALS_FILE: str
     DISABLE_AUTH: bool = False
     DEV_USER_ID: str = "dev_uid_tqwatcSdikMYybndtZAr"
+    DEV_USER_EMAIL: str = "dev_user@gmail.com"
 
     CORS_ORIGINS: list[str] = ["http://localhost:4000"]
 
