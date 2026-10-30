@@ -17,13 +17,18 @@ import { EmojiPicker } from "./EmojiPicker";
 
 const AVATAR_STACK_VISIBLE_COUNT = 3;
 
-function GroupAvatarStack({ members }: { members: ChatMemberProfile[] }) {
+function GroupAvatarStack({ members, onClick }: { members: ChatMemberProfile[]; onClick: () => void }) {
   if (members.length === 0) return null;
 
   const visible = members.slice(0, AVATAR_STACK_VISIBLE_COUNT);
 
   return (
-    <div className="flex shrink-0 items-center">
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label="View group members"
+      className="flex shrink-0 items-center rounded-full transition-opacity hover:opacity-80"
+    >
       <div className="flex items-center">
         {visible.map((member, index) => (
           <div
@@ -43,6 +48,59 @@ function GroupAvatarStack({ members }: { members: ChatMemberProfile[] }) {
       <span className="ml-2 flex h-7 min-w-7 items-center justify-center rounded-full bg-primary-soft px-2 text-xs font-semibold text-primary">
         {members.length}
       </span>
+    </button>
+  );
+}
+
+function GroupMembersModal({
+  members,
+  currentUserId,
+  onClose,
+}: {
+  members: ChatMemberProfile[];
+  currentUserId: string | undefined;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/30 px-4"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-sm rounded-2xl bg-surface p-4 shadow-xl"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-ink">Group members ({members.length})</h3>
+          <button
+            type="button"
+            aria-label="Close"
+            onClick={onClose}
+            className="flex h-7 w-7 items-center justify-center rounded-full text-ink-muted transition-colors hover:bg-surface-muted hover:text-ink"
+          >
+            ×
+          </button>
+        </div>
+        <div className="max-h-80 space-y-1 overflow-y-auto scrollbar-hide">
+          {members.map((member) => (
+            <div key={member.user_id} className="flex items-center gap-3 rounded-xl px-2 py-2">
+              <Avatar
+                src={member.profile?.avatar_url}
+                label={member.profile?.display_name ?? "?"}
+                className="h-9 w-9"
+              />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium text-ink">
+                  {member.user_id === currentUserId ? "You" : member.profile?.display_name ?? "Unknown"}
+                </p>
+                {member.profile?.username && (
+                  <p className="truncate text-xs text-ink-muted">@{member.profile.username}</p>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -144,6 +202,7 @@ export function ChatView() {
   const [draft, setDraft] = useState("");
   const [members, setMembers] = useState<ChatMemberProfile[]>([]);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showMembersModal, setShowMembersModal] = useState(false);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isTypingRef = useRef(false);
   const draftInputRef = useRef<HTMLInputElement>(null);
@@ -166,6 +225,7 @@ export function ChatView() {
 
   useEffect(() => {
     setShowEmojiPicker(false);
+    setShowMembersModal(false);
   }, [activeChat?.chatId]);
 
   // Fetch member names for the group header subtitle - not needed for direct chats,
@@ -300,7 +360,7 @@ export function ChatView() {
         </div>
         <div className="flex shrink-0 items-center gap-1">
           {isGroup ? (
-            <GroupAvatarStack members={members} />
+            <GroupAvatarStack members={members} onClick={() => setShowMembersModal(true)} />
           ) : (
             <ComingSoonIconButton label="Search in chat">
               <SearchIcon className="h-4.5 w-4.5 stroke-[2.5]" />
@@ -382,6 +442,14 @@ export function ChatView() {
           )}
         </div>
       </div>
+
+      {showMembersModal && isGroup && (
+        <GroupMembersModal
+          members={members}
+          currentUserId={profile?.user_id}
+          onClose={() => setShowMembersModal(false)}
+        />
+      )}
     </div>
   );
 }
