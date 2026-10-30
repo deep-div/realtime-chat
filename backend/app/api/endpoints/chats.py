@@ -5,6 +5,8 @@ from pydantic import Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user_id
+from app.api.endpoints.connections import notify_membership_change
+from app.api.endpoints.sockets import local_connections
 from app.clients.postgre import get_db
 from app.services.chat.schema import (
     AddMember,
@@ -143,7 +145,7 @@ async def add_chat_member(
 ) -> ChatMember:
     """Add a user to a group chat. Requires the caller to be an OWNER/ADMIN."""
     try:
-        return await chat_store.add_member(db, chat_id, user_id, request.user_id)
+        member = await chat_store.add_member(db, chat_id, user_id, request.user_id)
     except ChatNotFoundError:
         raise HTTPException(status_code=404, detail="chat not found")
     except NotAGroupChatError:
@@ -155,6 +157,11 @@ async def add_chat_member(
     except AlreadyMemberError:
         raise HTTPException(status_code=409, detail="user is already a member")
 
+    members = await chat_store.list_members(db, chat_id)
+    recipient_ids = [m.user_id for m in members]
+    await notify_membership_change("member_added", chat_id, request.user_id, recipient_ids, local_connections)
+    return member
+
 
 @router.delete("/{chat_id}/members/{member_user_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def remove_chat_member(
@@ -164,6 +171,7 @@ async def remove_chat_member(
     db: AsyncSession = Depends(get_db),
 ) -> None:
     """Remove a user from a group chat, or leave it yourself."""
+    members_before = await chat_store.list_members(db, chat_id)
     try:
         await chat_store.remove_member(db, chat_id, user_id, member_user_id)
     except ChatNotFoundError:
@@ -174,3 +182,8 @@ async def remove_chat_member(
         raise HTTPException(status_code=404, detail="chat or member not found")
     except InsufficientRoleError:
         raise HTTPException(status_code=403, detail="only an owner or admin can remove members")
+
+    recipient_ids = [m.user_id for m in members_before]
+    await notify_membership_change(
+        "member_removed", chat_id, member_user_id, recipient_ids, local_connections
+    )

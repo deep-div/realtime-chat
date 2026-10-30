@@ -79,6 +79,23 @@ async def notify_typing(
                 await _safe_send_json(socket, payload)
 
 
+async def notify_membership_change(
+    event: str,
+    chat_id: str,
+    member_user_id: str,
+    recipient_ids: list[str],
+    local_connections: dict[str, WebSocket],
+) -> None:
+    """Push a member_added/member_removed update to a chat's members, for whichever are connected to this process."""
+    payload = {"event": event, "chat_id": chat_id, "user_id": member_user_id}
+    for recipient_id in recipient_ids:
+        connections = await connection_registry.get_connections_for_user(recipient_id)
+        for conn in connections:
+            socket = local_connections.get(conn.connection_id)
+            if socket is not None:
+                await _safe_send_json(socket, payload)
+
+
 async def deliver_message(
     session,
     chat_message: ChatMessage,

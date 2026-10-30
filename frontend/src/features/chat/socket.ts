@@ -8,6 +8,8 @@ type IncomingEvent =
   | { event: "presence"; users: UserPresence[] }
   | { event: "presence_update"; users: UserPresence[] }
   | { event: "typing_update"; chat_id: string; user_id: string; is_typing: boolean }
+  | { event: "member_added"; chat_id: string; user_id: string }
+  | { event: "member_removed"; chat_id: string; user_id: string }
   | { type: "message_status"; message_id?: string; status: string; message?: ChatMessage }
   | { type: "handshake_ack"; connection_id: string }
   | { type: "message_error"; client_message_id?: string; message_id?: string; error: string };
@@ -18,6 +20,7 @@ export interface ChatSocketHandlers {
   onMessageError: (payload: { clientMessageId?: string; messageId?: string; error: string }) => void;
   onPresence: (users: UserPresence[]) => void;
   onTypingUpdate: (payload: { chatId: string; userId: string; isTyping: boolean }) => void;
+  onMembershipChange: (payload: { chatId: string; userId: string; added: boolean }) => void;
   /** Fires after every successful handshake, including reconnects - re-subscribe presence here. */
   onConnected?: () => void;
 }
@@ -129,6 +132,14 @@ export class ChatSocket {
         chatId: payload.chat_id,
         userId: payload.user_id,
         isTyping: payload.is_typing,
+      });
+      return;
+    }
+    if ("event" in payload && (payload.event === "member_added" || payload.event === "member_removed")) {
+      this.handlers.onMembershipChange({
+        chatId: payload.chat_id,
+        userId: payload.user_id,
+        added: payload.event === "member_added",
       });
       return;
     }

@@ -328,6 +328,7 @@ export function ChatView() {
     presenceByUserId,
     typingByChatId,
     typingUsersByChatId,
+    membershipVersionByChatId,
     setTyping,
     privateKey,
     closeChat,
@@ -380,7 +381,11 @@ export function ChatView() {
     return () => {
       cancelled = true;
     };
-  }, [activeChat?.chatId, activeChat?.chatType]);
+  }, [
+    activeChat?.chatId,
+    activeChat?.chatType,
+    activeChat ? membershipVersionByChatId[activeChat.chatId] : undefined,
+  ]);
 
   function refreshMembers() {
     if (!activeChat || activeChat.chatType !== "group") return;

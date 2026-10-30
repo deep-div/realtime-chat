@@ -26,6 +26,7 @@ interface ChatContextValue {
   presenceByUserId: Record<string, UserPresence>;
   typingByChatId: Record<string, boolean>;
   typingUsersByChatId: Record<string, string[]>;
+  membershipVersionByChatId: Record<string, number>;
   privateKey: CryptoKey | null;
   openChat: (chat: ChatSummary) => Promise<void>;
   closeChat: () => void;
@@ -51,6 +52,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const [presenceByUserId, setPresenceByUserId] = useState<Record<string, UserPresence>>({});
   const [typingByChatId, setTypingByChatId] = useState<Record<string, boolean>>({});
   const [typingUsersByChatId, setTypingUsersByChatId] = useState<Record<string, string[]>>({});
+  const [membershipVersionByChatId, setMembershipVersionByChatId] = useState<Record<string, number>>({});
   const socketRef = useRef<ChatSocket | null>(null);
   const activeChatRef = useRef<ActiveChat | null>(null);
   const ackedMessageIdsRef = useRef<Set<string>>(new Set());
@@ -180,6 +182,19 @@ export function ChatProvider({ children }: { children: ReactNode }) {
             : current.filter((id) => id !== userId);
           return { ...prev, [chatId]: next };
         });
+      },
+      onMembershipChange: ({ chatId, userId, added }) => {
+        setMembershipVersionByChatId((prev) => ({ ...prev, [chatId]: (prev[chatId] ?? 0) + 1 }));
+        const isSelf = userId === profile?.user_id;
+        if (isSelf && !added) {
+          // We were removed from (or left) this group on another device/session - drop it
+          // from the list and close it if it's currently open, same as leaving locally.
+          setChats((prev) => prev.filter((c) => c.chat_id !== chatId));
+          if (activeChatRef.current?.chatId === chatId) setActiveChatAndRef(null);
+        } else if (isSelf && added) {
+          // We were just added to a group - fetch its summary so it shows up in the list.
+          listMyChats().then(setChats);
+        }
       },
       onConnected: () => {
         // The backend's watcher list is keyed by connection id, so a reconnect
@@ -388,6 +403,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       presenceByUserId,
       typingByChatId,
       typingUsersByChatId,
+      membershipVersionByChatId,
       privateKey,
       openChat,
       closeChat,
@@ -407,6 +423,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       privateKey,
       typingByChatId,
       typingUsersByChatId,
+      membershipVersionByChatId,
     ],
   );
 
