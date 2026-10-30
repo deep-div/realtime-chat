@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "../../features/auth/hooks/useAuth";
 import { AuthModal } from "../../features/auth/components/AuthModal";
+import { CreateGroupModal } from "../../features/chat/components/CreateGroupModal";
 import { useChat } from "../../features/chat/hooks/useChat";
 import { useDecryptedText } from "../../features/chat/hooks/useDecryptedText";
 import type { ChatSummary } from "../../features/chat/types";
@@ -9,6 +10,7 @@ import type { Profile } from "../../features/profile/types";
 import { Avatar } from "../ui/Avatar";
 import { ArrowLeftIcon } from "../ui/ArrowLeftIcon";
 import { ChatBubbleIcon } from "../ui/ChatBubbleIcon";
+import { PlusIcon } from "../ui/PlusIcon";
 import { SearchIcon } from "../ui/SearchIcon";
 import { Skeleton } from "../ui/Skeleton";
 import { UserIcon } from "../ui/UserIcon";
@@ -81,6 +83,7 @@ export function Sidebar({ focusSearch = false }: SidebarProps) {
   const [results, setResults] = useState<Profile[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showSignIn, setShowSignIn] = useState(false);
+  const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [isSuggestedLoading, setIsSuggestedLoading] = useState(true);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -189,7 +192,7 @@ export function Sidebar({ focusSearch = false }: SidebarProps) {
 
   return (
     <aside className="flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden">
-      <div className="flex items-center gap-3 px-5 pt-5">
+      <div className="flex items-center gap-2 px-5 pt-5">
         <div className="flex flex-1 items-center gap-2.5 rounded-full bg-surface-muted px-4 py-2.5 ring-1 ring-transparent transition-shadow focus-within:ring-primary/30">
           <SearchIcon className="h-4.5 w-4.5 shrink-0 text-ink-muted" />
           <input
@@ -201,7 +204,17 @@ export function Sidebar({ focusSearch = false }: SidebarProps) {
             className="w-full bg-transparent text-sm text-ink placeholder:text-ink-muted focus:outline-none"
           />
         </div>
+        <button
+          type="button"
+          aria-label="New group"
+          onClick={() => setShowCreateGroup(true)}
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-muted text-ink-muted transition-colors hover:bg-primary-soft hover:text-primary"
+        >
+          <PlusIcon className="h-4.5 w-4.5" />
+        </button>
       </div>
+
+      <CreateGroupModal isOpen={showCreateGroup} onClose={() => setShowCreateGroup(false)} />
 
       {query.trim() ? (
             <div className="flex-1 overflow-y-auto scrollbar-hide px-2 pt-2">
