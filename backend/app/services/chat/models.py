@@ -40,6 +40,9 @@ class ChatMemberModel(Base):
     role: Mapped[str] = mapped_column(String, default="member")
     joined_at: Mapped[int] = mapped_column(BigInteger)
     muted_until: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    # Set when this member deletes the chat from their own view: messages sent at or
+    # before this point are hidden for them only, until a new message resurfaces it.
+    cleared_at: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
 
     __table_args__ = (
         Index("ix_chat_members_user_id", "user_id"),

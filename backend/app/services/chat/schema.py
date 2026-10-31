@@ -29,6 +29,7 @@ class ChatMember(BaseModel):
     role: ChatRole = ChatRole.MEMBER
     joined_at: int
     muted_until: int | None = None
+    cleared_at: int | None = None
 
 
 class ChatMemberWithProfile(ChatMember):

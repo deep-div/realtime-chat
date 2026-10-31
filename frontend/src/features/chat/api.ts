@@ -41,3 +41,10 @@ export async function removeChatMember(chatId: string, memberUserId: string): Pr
     method: "DELETE",
   });
 }
+
+/** Deletes a chat from the caller's own view only - it reappears once a new message arrives. */
+export async function deleteChat(chatId: string): Promise<void> {
+  await apiFetch<void>(`/chats/${chatId}`, {
+    method: "DELETE",
+  });
+}

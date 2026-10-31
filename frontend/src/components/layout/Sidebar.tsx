@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useAuth } from "../../features/auth/hooks/useAuth";
 import { AuthModal } from "../../features/auth/components/AuthModal";
 import { CreateGroupModal } from "../../features/chat/components/CreateGroupModal";
+import { deleteChat } from "../../features/chat/api";
 import { useChat } from "../../features/chat/hooks/useChat";
 import { useDecryptedText } from "../../features/chat/hooks/useDecryptedText";
 import type { ChatSummary } from "../../features/chat/types";
@@ -13,6 +14,7 @@ import { ChatBubbleIcon } from "../ui/ChatBubbleIcon";
 import { PlusIcon } from "../ui/PlusIcon";
 import { SearchIcon } from "../ui/SearchIcon";
 import { Skeleton } from "../ui/Skeleton";
+import { TrashIcon } from "../ui/TrashIcon";
 import { UserIcon } from "../ui/UserIcon";
 import person1 from "../../assests/person1.png";
 import person2 from "../../assests/person2.png";
@@ -79,8 +81,32 @@ interface SidebarProps {
 
 export function Sidebar({ focusSearch = false }: SidebarProps) {
   const { user } = useAuth();
-  const { chats, isLoadingChats, activeChat, openChat, startDirectChat, presenceByUserId, privateKey } =
-    useChat();
+  const {
+    chats,
+    isLoadingChats,
+    activeChat,
+    openChat,
+    startDirectChat,
+    presenceByUserId,
+    privateKey,
+    removeChatFromList,
+  } = useChat();
+  const [deletingChatId, setDeletingChatId] = useState<string | null>(null);
+
+  async function handleDeleteChat(chat: ChatSummary) {
+    const label = chat.chat_type === "group" ? chat.title ?? "this group" : chat.peer?.display_name ?? "this chat";
+    if (!window.confirm(`Delete chat with ${label}? This only removes it from your view.`)) return;
+
+    setDeletingChatId(chat.chat_id);
+    try {
+      await deleteChat(chat.chat_id);
+      removeChatFromList(chat.chat_id);
+    } catch {
+      window.alert("Couldn't delete the chat. Please try again.");
+    } finally {
+      setDeletingChatId(null);
+    }
+  }
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Profile[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -247,54 +273,71 @@ export function Sidebar({ focusSearch = false }: SidebarProps) {
                 <ChatListSkeleton />
               ) : chats.length === 0 ? null : (
                 chats.map((chat) => (
-                  <button
+                  <div
                     key={chat.chat_id}
-                    type="button"
-                    onClick={() => openChat(chat)}
-                    disabled={chat.chat_type === "direct" && !chat.peer}
-                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-surface-muted ${
+                    className={`group flex w-full items-center gap-1 rounded-xl pr-1.5 transition-colors hover:bg-surface-muted ${
                       activeChat?.chatId === chat.chat_id ? "bg-surface-muted" : ""
                     }`}
                   >
-                    <div className="relative shrink-0">
-                      <Avatar
-                        src={chat.chat_type === "group" ? null : chat.peer?.avatar_url}
-                        label={chat.chat_type === "group" ? chat.title ?? "Group" : chat.peer?.display_name ?? "?"}
-                        className="h-10 w-10"
-                      />
-                      {chat.peer && presenceByUserId[chat.peer.user_id]?.status === "online" && (
-                        <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-surface bg-emerald-500" />
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="truncate text-sm font-medium text-ink">
-                          {chat.chat_type === "group"
-                            ? chat.title ?? "Group chat"
-                            : chat.peer?.display_name ?? "Unknown user"}
-                        </p>
-                        {chat.last_message_at && (
-                          <span
-                            className={`shrink-0 text-[11px] ${
-                              chat.unread_count > 0 ? "font-semibold text-primary" : "text-ink-muted"
-                            }`}
-                          >
-                            {formatChatTimestamp(chat.last_message_at)}
-                          </span>
+                    <button
+                      type="button"
+                      onClick={() => openChat(chat)}
+                      disabled={chat.chat_type === "direct" && !chat.peer}
+                      className="flex min-w-0 flex-1 items-center gap-3 rounded-xl px-3 py-2.5 text-left"
+                    >
+                      <div className="relative shrink-0">
+                        <Avatar
+                          src={chat.chat_type === "group" ? null : chat.peer?.avatar_url}
+                          label={chat.chat_type === "group" ? chat.title ?? "Group" : chat.peer?.display_name ?? "?"}
+                          className="h-10 w-10"
+                        />
+                        {chat.peer && presenceByUserId[chat.peer.user_id]?.status === "online" && (
+                          <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-surface bg-emerald-500" />
                         )}
                       </div>
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="truncate text-xs text-ink-muted">
-                          <ChatPreviewText chat={chat} privateKey={privateKey} />
-                        </p>
-                        {chat.unread_count > 0 && (
-                          <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-semibold text-primary-foreground">
-                            {chat.unread_count > 99 ? "99+" : chat.unread_count}
-                          </span>
-                        )}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="truncate text-sm font-medium text-ink">
+                            {chat.chat_type === "group"
+                              ? chat.title ?? "Group chat"
+                              : chat.peer?.display_name ?? "Unknown user"}
+                          </p>
+                          {chat.last_message_at && (
+                            <span
+                              className={`shrink-0 text-[11px] ${
+                                chat.unread_count > 0 ? "font-semibold text-primary" : "text-ink-muted"
+                              }`}
+                            >
+                              {formatChatTimestamp(chat.last_message_at)}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="truncate text-xs text-ink-muted">
+                            <ChatPreviewText chat={chat} privateKey={privateKey} />
+                          </p>
+                          {chat.unread_count > 0 && (
+                            <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-semibold text-primary-foreground">
+                              {chat.unread_count > 99 ? "99+" : chat.unread_count}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </button>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        void handleDeleteChat(chat);
+                      }}
+                      disabled={deletingChatId === chat.chat_id}
+                      aria-label="Delete chat"
+                      title="Delete chat"
+                      className="shrink-0 rounded-lg p-2 text-ink-muted opacity-0 transition-opacity hover:bg-surface hover:text-red-500 group-hover:opacity-100 disabled:opacity-50"
+                    >
+                      <TrashIcon className="h-4 w-4" />
+                    </button>
+                  </div>
                 ))
               )}
             </div>

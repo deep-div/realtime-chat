@@ -98,6 +98,22 @@ async def get_chat(
     return chat
 
 
+@router.delete("/{chat_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_chat(
+    chat_id: str,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """Delete a chat from the caller's own view only - the other member(s) keep theirs,
+    and it reappears for the caller the next time a new message arrives."""
+    try:
+        await chat_store.clear_chat(db, chat_id, user_id)
+    except ChatNotFoundError:
+        raise HTTPException(status_code=404, detail="chat not found")
+    except NotAMemberError:
+        raise HTTPException(status_code=404, detail="chat not found")
+
+
 @router.get("/{chat_id}/members", response_model=list[ChatMemberWithProfile])
 async def get_chat_members(
     chat_id: str,
@@ -128,10 +144,11 @@ async def get_chat_messages(
 ) -> list[ChatMessage]:
     """Fetch a chat's most recent messages, oldest first. 404s if the caller isn't a member."""
     members = await chat_store.list_members(db, chat_id)
-    if not any(member.user_id == user_id for member in members):
+    member = next((m for m in members if m.user_id == user_id), None)
+    if member is None:
         raise HTTPException(status_code=404, detail="chat not found")
 
-    return await message_store.get_messages(db, chat_id, limit)
+    return await message_store.get_messages(db, chat_id, limit, after=member.cleared_at)
 
 
 @router.post(

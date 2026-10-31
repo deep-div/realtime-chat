@@ -365,7 +365,12 @@ class ChatStore:
         Bypasses the list_my_chats cache since it needs the direct_user_min/max columns
         that cache doesn't store, and cursor pagination isn't worth caching.
         """
-        has_messages = exists().where(MessageModel.chat_id == ChatModel.chat_id)
+        # A cleared chat should only reappear once a message lands after the clear point,
+        # so "has messages" means "has a message newer than this member's cleared_at".
+        has_messages = exists().where(
+            MessageModel.chat_id == ChatModel.chat_id,
+            MessageModel.sent_at > func.coalesce(ChatMemberModel.cleared_at, 0),
+        )
         query = (
             select(ChatModel)
             .join(ChatMemberModel, ChatMemberModel.chat_id == ChatModel.chat_id)
@@ -406,7 +411,14 @@ class ChatStore:
                 MessageModel.chat_id, MessageModel.ciphertext, MessageModel.scheme, MessageModel.sent_at
             )
             .distinct(MessageModel.chat_id)
-            .where(MessageModel.chat_id.in_(chat_ids))
+            .join(
+                ChatMemberModel,
+                (ChatMemberModel.chat_id == MessageModel.chat_id) & (ChatMemberModel.user_id == user_id),
+            )
+            .where(
+                MessageModel.chat_id.in_(chat_ids),
+                MessageModel.sent_at > func.coalesce(ChatMemberModel.cleared_at, 0),
+            )
             .order_by(MessageModel.chat_id, MessageModel.sent_at.desc())
         )
         previews = {
@@ -425,9 +437,14 @@ class ChatStore:
         )
         unread_result = await session.execute(
             select(MessageModel.chat_id, func.count())
+            .join(
+                ChatMemberModel,
+                (ChatMemberModel.chat_id == MessageModel.chat_id) & (ChatMemberModel.user_id == user_id),
+            )
             .where(
                 MessageModel.chat_id.in_(chat_ids),
                 MessageModel.sender_id != user_id,
+                MessageModel.sent_at > func.coalesce(ChatMemberModel.cleared_at, 0),
                 ~has_read_receipt,
             )
             .group_by(MessageModel.chat_id)
@@ -475,7 +492,22 @@ class ChatStore:
             role=ChatRole(row.role),
             joined_at=row.joined_at,
             muted_until=row.muted_until,
+            cleared_at=row.cleared_at,
         )
+
+    async def clear_chat(self, session: AsyncSession, chat_id: str, user_id: str) -> None:
+        """Delete a chat from one user's own view: hides messages sent up to now for them
+        only. The other member's view, and the underlying messages, are untouched - the
+        chat simply reappears for this user once a new message arrives."""
+        member_row = await session.get(ChatMemberModel, (chat_id, user_id))
+        if member_row is None:
+            chat_row = await session.get(ChatModel, chat_id)
+            raise ChatNotFoundError(chat_id) if chat_row is None else NotAMemberError(user_id)
+
+        member_row.cleared_at = int(time.time() * 1000)
+        await session.commit()
+        await self._invalidate_members_cache(chat_id)
+        await self._invalidate_user_chats_cache(user_id)
 
     def _to_chat_created(
         self, chat: ChatModel, members: list[str], already_existed: bool

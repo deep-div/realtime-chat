@@ -179,23 +179,29 @@ class MessageStore:
         await session.commit()
 
     async def get_messages(
-        self, session: AsyncSession, chat_id: str, limit: int = 50
+        self, session: AsyncSession, chat_id: str, limit: int = 50, after: int | None = None
     ) -> list[ChatMessage]:
-        """Fetch a chat's most recent messages, oldest first. Reads Redis before Postgres."""
+        """Fetch a chat's most recent messages, oldest first. Reads Redis before Postgres.
+
+        `after` excludes messages sent at or before that timestamp - used to hide history
+        a user has cleared from their own view, without touching the underlying rows.
+        """
         cached = await self._get_cached_messages(chat_id, limit)
         if cached is not None:
-            return cached
+            messages = cached
+        else:
+            result = await session.execute(
+                select(MessageModel)
+                .where(MessageModel.chat_id == chat_id)
+                .order_by(MessageModel.sent_at.desc())
+                .limit(limit)
+            )
+            rows = list(result.scalars().all())
+            messages = [self._row_to_message(row) for row in reversed(rows)]
+            await self._cache_messages_bulk(chat_id, messages)
 
-        result = await session.execute(
-            select(MessageModel)
-            .where(MessageModel.chat_id == chat_id)
-            .order_by(MessageModel.sent_at.desc())
-            .limit(limit)
-        )
-        rows = list(result.scalars().all())
-        messages = [self._row_to_message(row) for row in reversed(rows)]
-
-        await self._cache_messages_bulk(chat_id, messages)
+        if after is not None:
+            messages = [m for m in messages if m.sent_at > after]
         return messages
 
     async def get_undelivered_messages(
