@@ -318,6 +318,15 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
   function removeChatFromList(chatId: string) {
     setChats((prev) => prev.filter((c) => c.chat_id !== chatId));
+    // Drop the cached history too - a direct chat reuses the same chat_id if it's
+    // reopened later, and without this it'd keep showing messages hidden server-side
+    // by a chat delete instead of refetching the (now-filtered) history.
+    setMessagesByChatId((prev) => {
+      if (!(chatId in prev)) return prev;
+      const { [chatId]: _removed, ...rest } = prev;
+      return rest;
+    });
+    historyLoadedChatIdsRef.current.delete(chatId);
     if (activeChatRef.current?.chatId === chatId) {
       setActiveChatAndRef(null);
     }
