@@ -4,8 +4,11 @@ set -euo pipefail
 cd /app/backend
 
 if [ -n "${FIREBASE_CREDENTIALS_JSON:-}" ]; then
+  echo "FIREBASE_CREDENTIALS_JSON is set (length: ${#FIREBASE_CREDENTIALS_JSON} chars), writing credentials file"
   mkdir -p ./secrets
   echo "${FIREBASE_CREDENTIALS_JSON}" > ./secrets/firebase-adminsdk.json
+else
+  echo "FIREBASE_CREDENTIALS_JSON is NOT set - firebase init will fail"
 fi
 
 REDIS_PID=""
