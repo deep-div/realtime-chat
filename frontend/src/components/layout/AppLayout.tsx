@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useAuth } from "../../features/auth/hooks/useAuth";
 import { useChat } from "../../features/chat/hooks/useChat";
+import { CompleteProfileForm } from "../../features/profile/components/CompleteProfileForm";
 import { EditProfileView } from "../../features/profile/components/EditProfileView";
 import { Skeleton } from "../ui/Skeleton";
 import { MainPanel } from "./MainPanel";
@@ -34,11 +35,22 @@ function AppShellSkeleton() {
 }
 
 export function AppLayout() {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, profile, isProfileLoading } = useAuth();
   const { activeChat } = useChat();
   const [isEditingProfile, setIsEditingProfile] = useState(false);
 
   if (isLoading) return <AppShellSkeleton />;
+
+  // Block the rest of the app - chat list, search, messaging - until the user
+  // has a profile (username + photo). No browsing or messaging with no identity.
+  const profileIncomplete = !!user && user.emailVerified && !isProfileLoading && !profile;
+  if (profileIncomplete) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center overflow-hidden bg-[#ffffff]">
+        <CompleteProfileForm />
+      </div>
+    );
+  }
 
   // On mobile there's only room for one pane: the chat list (+ nav rail) or the
   // open chat, toggled by whether a chat is active. From md up, both show at once.

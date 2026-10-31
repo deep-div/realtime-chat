@@ -3,18 +3,14 @@ import { ChatPlaceholder } from "../../features/auth/components/ChatPlaceholder"
 import { useAuth } from "../../features/auth/hooks/useAuth";
 import { ChatView } from "../../features/chat/components/ChatView";
 import { useChat } from "../../features/chat/hooks/useChat";
-import { CompleteProfileForm } from "../../features/profile/components/CompleteProfileForm";
 
 export function MainPanel() {
-  const { user, isLoading, profile, isProfileLoading } = useAuth();
+  const { user, isLoading } = useAuth();
   const { activeChat } = useChat();
 
   function renderContent() {
     if (isLoading) return null;
     if (!user) return <AuthLanding />;
-    if (user.emailVerified && (isProfileLoading || !profile)) {
-      return isProfileLoading ? null : <CompleteProfileForm />;
-    }
     return <ChatPlaceholder />;
   }
 
