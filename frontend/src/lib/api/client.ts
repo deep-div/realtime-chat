@@ -1,6 +1,7 @@
 import { firebaseAuth } from "../firebase/config";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+/** Empty in prod (same-origin, frontend served alongside the API); localhost in dev. */
+const API_BASE_URL = import.meta.env.DEV ? "http://localhost:8000" : "";
 
 export class ApiError extends Error {
   status: number;

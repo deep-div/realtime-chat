@@ -29,7 +29,7 @@ jobs:
           file: ./dockerfile
           push: true
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/mutualfund-screener:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/messenger:latest
           build-args: |
             VITE_FIREBASE_API_KEY=${{ vars.VITE_FIREBASE_API_KEY }}
             VITE_FIREBASE_AUTH_DOMAIN=${{ vars.VITE_FIREBASE_AUTH_DOMAIN }}
@@ -59,7 +59,7 @@ jobs:
             exit 1
           fi
 
-          IMAGE_PATH="docker.io/${DOCKERHUB_USERNAME}/mutualfund-screener:latest"
+          IMAGE_PATH="docker.io/${DOCKERHUB_USERNAME}/messenger:latest"
 
           SERVICE_JSON="$(curl --fail --show-error --silent \
             -H "Authorization: Bearer ${RENDER_API_KEY}" \

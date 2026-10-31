@@ -1,7 +1,8 @@
 import { firebaseAuth } from "../../lib/firebase/config";
 import type { ChatMessage, UserPresence } from "./types";
 
-const API_BASE_URL: string = import.meta.env.VITE_API_BASE_URL;
+/** Empty in prod (same-origin, frontend served alongside the API); localhost in dev. */
+const API_BASE_URL: string = import.meta.env.DEV ? "http://localhost:8000" : "";
 
 type IncomingEvent =
   | { event: "new_message"; message: ChatMessage }
