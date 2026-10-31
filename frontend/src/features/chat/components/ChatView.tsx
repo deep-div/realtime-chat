@@ -21,7 +21,16 @@ import { EmojiPicker } from "./EmojiPicker";
 
 const AVATAR_STACK_VISIBLE_COUNT = 3;
 
-function GroupAvatarStack({ members, onClick }: { members: ChatMemberProfile[]; onClick: () => void }) {
+function GroupAvatarStack({
+  members,
+  isLoading,
+  onClick,
+}: {
+  members: ChatMemberProfile[];
+  isLoading: boolean;
+  onClick: () => void;
+}) {
+  if (isLoading) return <Skeleton className="h-8 w-8 shrink-0 rounded-full" />;
   if (members.length === 0) return null;
 
   const visible = members.slice(0, AVATAR_STACK_VISIBLE_COUNT);
@@ -359,6 +368,7 @@ export function ChatView() {
   } = useChat();
   const [draft, setDraft] = useState("");
   const [members, setMembers] = useState<ChatMemberProfile[]>([]);
+  const [isLoadingMembers, setIsLoadingMembers] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showMembersModal, setShowMembersModal] = useState(false);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -391,15 +401,20 @@ export function ChatView() {
   useEffect(() => {
     if (!activeChat || activeChat.chatType !== "group") {
       setMembers([]);
+      setIsLoadingMembers(false);
       return;
     }
     let cancelled = false;
+    setIsLoadingMembers(true);
     getChatMembers(activeChat.chatId)
       .then((result) => {
         if (!cancelled) setMembers(result);
       })
       .catch(() => {
         if (!cancelled) setMembers([]);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingMembers(false);
       });
     return () => {
       cancelled = true;
@@ -524,19 +539,27 @@ export function ChatView() {
           <p className="text-sm font-semibold text-ink">
             {isGroup ? activeChat.title ?? "Group chat" : activeChat.peer?.display_name}
           </p>
-          <p
-            className={`truncate text-xs ${
-              (isGroup && typingNamesLine) || (!isGroup && (isPeerTyping || presence?.status === "online"))
-                ? "text-primary"
-                : "text-ink-muted"
-            } ${isPeerTyping || typingNamesLine ? "italic" : ""}`}
-          >
-            {statusLine}
-          </p>
+          {isGroup && isLoadingMembers ? (
+            <Skeleton className="mt-1 h-3 w-28" />
+          ) : (
+            <p
+              className={`truncate text-xs ${
+                (isGroup && typingNamesLine) || (!isGroup && (isPeerTyping || presence?.status === "online"))
+                  ? "text-primary"
+                  : "text-ink-muted"
+              } ${isPeerTyping || typingNamesLine ? "italic" : ""}`}
+            >
+              {statusLine}
+            </p>
+          )}
         </div>
         <div className="flex shrink-0 items-center gap-1">
           {isGroup ? (
-            <GroupAvatarStack members={members} onClick={() => setShowMembersModal(true)} />
+            <GroupAvatarStack
+              members={members}
+              isLoading={isLoadingMembers}
+              onClick={() => setShowMembersModal(true)}
+            />
           ) : (
             <ComingSoonIconButton label="Search in chat">
               <SearchIcon className="h-4.5 w-4.5 stroke-[2.5]" />
