@@ -6,11 +6,11 @@ class Settings(BaseSettings):
 
     ENVIRONMENT: str
     LOG_LEVEL: str
-    SERVER_ID: str
+    SERVER_ID: str = "server-01"
 
-    REDIS_HOST: str
-    REDIS_KEY: str
-    REDIS_PORT: int
+    REDIS_HOST: str = "localhost"
+    REDIS_KEY: str = ""
+    REDIS_PORT: int = 6379
 
     DB_HOST: str
     DB_PORT: int
