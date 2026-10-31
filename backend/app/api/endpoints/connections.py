@@ -96,6 +96,23 @@ async def notify_membership_change(
                 await _safe_send_json(socket, payload)
 
 
+async def notify_chat_updated(
+    chat_id: str,
+    title: str | None,
+    avatar_url: str | None,
+    recipient_ids: list[str],
+    local_connections: dict[str, WebSocket],
+) -> None:
+    """Push a chat_updated (title/photo change) update to a group's members, for whichever are connected to this process."""
+    payload = {"event": "chat_updated", "chat_id": chat_id, "title": title, "avatar_url": avatar_url}
+    for recipient_id in recipient_ids:
+        connections = await connection_registry.get_connections_for_user(recipient_id)
+        for conn in connections:
+            socket = local_connections.get(conn.connection_id)
+            if socket is not None:
+                await _safe_send_json(socket, payload)
+
+
 async def notify_message_deleted(
     chat_id: str,
     message_ids: list[str],

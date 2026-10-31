@@ -7,6 +7,9 @@ from app.core.config import settings
 
 storage_admin_client: Client = create_client(settings.STORAGE_URL, settings.STORAGE_SERVICE_KEY)
 
+ALLOWED_AVATAR_TYPES = {"image/jpeg", "image/png", "image/webp"}
+MAX_AVATAR_SIZE_BYTES = 5 * 1024 * 1024
+
 
 def ensure_avatar_bucket_exists() -> None:
     """Create the avatar storage bucket if it doesn't already exist. Safe to call on every startup."""
@@ -23,6 +26,20 @@ async def upload_avatar(user_id: str, file_bytes: bytes, content_type: str) -> s
     """Upload a user's avatar to object storage and return its public URL."""
     extension = content_type.split("/")[-1]
     path = f"{user_id}/{uuid.uuid4()}.{extension}"
+
+    storage_admin_client.storage.from_(settings.STORAGE_AVATAR_BUCKET).upload(
+        path,
+        file_bytes,
+        {"content-type": content_type, "upsert": "true"},
+    )
+
+    return storage_admin_client.storage.from_(settings.STORAGE_AVATAR_BUCKET).get_public_url(path)
+
+
+async def upload_group_avatar(chat_id: str, file_bytes: bytes, content_type: str) -> str:
+    """Upload a group chat's photo to object storage and return its public URL."""
+    extension = content_type.split("/")[-1]
+    path = f"group-{chat_id}/{uuid.uuid4()}.{extension}"
 
     storage_admin_client.storage.from_(settings.STORAGE_AVATAR_BUCKET).upload(
         path,

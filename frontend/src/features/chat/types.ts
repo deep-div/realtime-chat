@@ -6,7 +6,7 @@ export interface Chat {
   chat_id: string;
   chat_type: ChatType;
   title: string | null;
-  avatar_media_id: string | null;
+  avatar_url: string | null;
   created_by: string;
   created_at: number;
 }
@@ -60,6 +60,7 @@ export interface ActiveChat {
    * messages are currently sent/read as plaintext rather than per-member encrypted). */
   peer: Profile | null;
   title: string | null;
+  avatarUrl: string | null;
 }
 
 export type PresenceStatus = "online" | "offline";

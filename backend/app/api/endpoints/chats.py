@@ -1,13 +1,18 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from pydantic import Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user_id
-from app.api.endpoints.connections import notify_membership_change, notify_message_deleted
+from app.api.endpoints.connections import (
+    notify_chat_updated,
+    notify_membership_change,
+    notify_message_deleted,
+)
 from app.api.endpoints.sockets import local_connections
 from app.clients.postgre import get_db
+from app.clients.storage import ALLOWED_AVATAR_TYPES, MAX_AVATAR_SIZE_BYTES, upload_group_avatar
 from app.services.chat.schema import (
     AddMember,
     Chat,
@@ -17,6 +22,7 @@ from app.services.chat.schema import (
     ChatSummary,
     CreateDirectChat,
     CreateGroupChat,
+    UpdateGroupChat,
 )
 from app.services.chat.store import (
     AlreadyMemberError,
@@ -112,6 +118,92 @@ async def delete_chat(
         raise HTTPException(status_code=404, detail="chat not found")
     except NotAMemberError:
         raise HTTPException(status_code=404, detail="chat not found")
+
+
+@router.patch("/{chat_id}", response_model=Chat)
+async def update_chat_title(
+    chat_id: str,
+    request: UpdateGroupChat,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> Chat:
+    """Rename a group chat. Requires the caller to be an OWNER/ADMIN."""
+    try:
+        chat = await chat_store.update_title(db, chat_id, user_id, request.title)
+    except ChatNotFoundError:
+        raise HTTPException(status_code=404, detail="chat not found")
+    except NotAGroupChatError:
+        raise HTTPException(status_code=400, detail="cannot rename a direct chat")
+    except NotAMemberError:
+        raise HTTPException(status_code=404, detail="chat not found")
+    except InsufficientRoleError:
+        raise HTTPException(status_code=403, detail="only an owner or admin can rename this group")
+
+    members = await chat_store.list_members(db, chat_id)
+    await notify_chat_updated(
+        chat_id, chat.title, chat.avatar_url, [m.user_id for m in members], local_connections
+    )
+    return chat
+
+
+@router.post("/{chat_id}/avatar", response_model=Chat)
+async def upload_chat_avatar(
+    chat_id: str,
+    file: UploadFile = File(...),
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> Chat:
+    """Upload a group chat's photo. Requires the caller to be an OWNER/ADMIN."""
+    if file.content_type not in ALLOWED_AVATAR_TYPES:
+        raise HTTPException(status_code=400, detail="avatar must be a JPEG, PNG, or WEBP image")
+
+    file_bytes = await file.read()
+    if len(file_bytes) > MAX_AVATAR_SIZE_BYTES:
+        raise HTTPException(status_code=400, detail="avatar must be under 5MB")
+
+    avatar_url = await upload_group_avatar(chat_id, file_bytes, file.content_type)
+
+    try:
+        chat = await chat_store.update_avatar(db, chat_id, user_id, avatar_url)
+    except ChatNotFoundError:
+        raise HTTPException(status_code=404, detail="chat not found")
+    except NotAGroupChatError:
+        raise HTTPException(status_code=400, detail="cannot set a photo on a direct chat")
+    except NotAMemberError:
+        raise HTTPException(status_code=404, detail="chat not found")
+    except InsufficientRoleError:
+        raise HTTPException(status_code=403, detail="only an owner or admin can change the group photo")
+
+    members = await chat_store.list_members(db, chat_id)
+    await notify_chat_updated(
+        chat_id, chat.title, chat.avatar_url, [m.user_id for m in members], local_connections
+    )
+    return chat
+
+
+@router.delete("/{chat_id}/avatar", response_model=Chat)
+async def remove_chat_avatar(
+    chat_id: str,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> Chat:
+    """Clear a group chat's photo. Requires the caller to be an OWNER/ADMIN."""
+    try:
+        chat = await chat_store.update_avatar(db, chat_id, user_id, None)
+    except ChatNotFoundError:
+        raise HTTPException(status_code=404, detail="chat not found")
+    except NotAGroupChatError:
+        raise HTTPException(status_code=400, detail="cannot clear a photo on a direct chat")
+    except NotAMemberError:
+        raise HTTPException(status_code=404, detail="chat not found")
+    except InsufficientRoleError:
+        raise HTTPException(status_code=403, detail="only an owner or admin can change the group photo")
+
+    members = await chat_store.list_members(db, chat_id)
+    await notify_chat_updated(
+        chat_id, chat.title, chat.avatar_url, [m.user_id for m in members], local_connections
+    )
+    return chat
 
 
 @router.get("/{chat_id}/members", response_model=list[ChatMemberWithProfile])

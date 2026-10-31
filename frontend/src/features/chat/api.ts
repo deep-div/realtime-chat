@@ -1,5 +1,5 @@
 import { apiFetch } from "../../lib/api/client";
-import type { ChatCreated, ChatMemberProfile, ChatMessage, ChatSummary } from "./types";
+import type { Chat, ChatCreated, ChatMemberProfile, ChatMessage, ChatSummary } from "./types";
 
 export async function createDirectChat(recipientId: string): Promise<ChatCreated> {
   return apiFetch<ChatCreated>("/chats", {
@@ -38,6 +38,31 @@ export async function addChatMember(chatId: string, userId: string): Promise<Cha
 
 export async function removeChatMember(chatId: string, memberUserId: string): Promise<void> {
   await apiFetch<void>(`/chats/${chatId}/members/${memberUserId}`, {
+    method: "DELETE",
+  });
+}
+
+/** Renames a group chat. Caller must be an owner/admin. */
+export async function updateGroupChat(chatId: string, title: string): Promise<Chat> {
+  return apiFetch<Chat>(`/chats/${chatId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ title }),
+  });
+}
+
+/** Uploads a group chat's photo. Caller must be an owner/admin. */
+export async function uploadGroupAvatar(chatId: string, file: File): Promise<Chat> {
+  const formData = new FormData();
+  formData.append("file", file);
+  return apiFetch<Chat>(`/chats/${chatId}/avatar`, {
+    method: "POST",
+    body: formData,
+  });
+}
+
+/** Clears a group chat's photo. Caller must be an owner/admin. */
+export async function removeGroupAvatar(chatId: string): Promise<Chat> {
+  return apiFetch<Chat>(`/chats/${chatId}/avatar`, {
     method: "DELETE",
   });
 }

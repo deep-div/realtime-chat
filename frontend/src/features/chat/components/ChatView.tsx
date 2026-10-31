@@ -249,6 +249,155 @@ function GroupMembersModal({
   );
 }
 
+function EditGroupModal({
+  title,
+  avatarUrl,
+  canManage,
+  onClose,
+  onRename,
+  onAvatarChange,
+  onAvatarRemove,
+}: {
+  title: string | null;
+  avatarUrl: string | null;
+  canManage: boolean;
+  onClose: () => void;
+  onRename: (title: string) => Promise<void>;
+  onAvatarChange: (file: File) => Promise<void>;
+  onAvatarRemove: () => Promise<void>;
+}) {
+  const [titleInput, setTitleInput] = useState(title ?? "");
+  const [isSavingTitle, setIsSavingTitle] = useState(false);
+  const [isSavingAvatar, setIsSavingAvatar] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const trimmedTitle = titleInput.trim();
+  const canSaveTitle = canManage && trimmedTitle.length > 0 && trimmedTitle !== title;
+
+  async function handleSaveTitle() {
+    if (!canSaveTitle) return;
+    setIsSavingTitle(true);
+    setError(null);
+    try {
+      await onRename(trimmedTitle);
+    } catch {
+      setError("Couldn't update the group name.");
+    } finally {
+      setIsSavingTitle(false);
+    }
+  }
+
+  async function handleFileSelected(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    setIsSavingAvatar(true);
+    setError(null);
+    try {
+      await onAvatarChange(file);
+    } catch {
+      setError("Couldn't update the group photo.");
+    } finally {
+      setIsSavingAvatar(false);
+    }
+  }
+
+  async function handleRemoveAvatar() {
+    setIsSavingAvatar(true);
+    setError(null);
+    try {
+      await onAvatarRemove();
+    } catch {
+      setError("Couldn't remove the group photo.");
+    } finally {
+      setIsSavingAvatar(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/30 px-4" onClick={onClose}>
+      <div
+        className="w-full max-w-sm rounded-2xl bg-surface p-4 shadow-xl"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-ink">Group info</h3>
+          <button
+            type="button"
+            aria-label="Close"
+            onClick={onClose}
+            className="flex h-7 w-7 items-center justify-center rounded-full text-ink-muted transition-colors hover:bg-surface-muted hover:text-ink"
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="mb-4 flex flex-col items-center gap-2">
+          <button
+            type="button"
+            disabled={!canManage || isSavingAvatar}
+            onClick={() => fileInputRef.current?.click()}
+            aria-label="Change group photo"
+            className="relative rounded-full disabled:cursor-default"
+          >
+            <Avatar src={avatarUrl} label={title ?? "Group"} className="h-20 w-20" textClassName="text-xl" />
+            {canManage && (
+              <span className="absolute inset-0 flex items-center justify-center rounded-full bg-ink/0 text-xs font-medium text-white opacity-0 transition-opacity hover:bg-ink/40 hover:opacity-100">
+                {isSavingAvatar ? "..." : "Change"}
+              </span>
+            )}
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="hidden"
+            onChange={handleFileSelected}
+          />
+          {canManage && avatarUrl && (
+            <button
+              type="button"
+              disabled={isSavingAvatar}
+              onClick={handleRemoveAvatar}
+              className="text-xs font-semibold text-red-600 transition-opacity hover:opacity-80 disabled:opacity-60"
+            >
+              Remove photo
+            </button>
+          )}
+        </div>
+
+        {canManage ? (
+          <div className="mb-1 flex items-center gap-2">
+            <input
+              type="text"
+              value={titleInput}
+              onChange={(event) => setTitleInput(event.target.value)}
+              placeholder="Group name"
+              maxLength={100}
+              className="w-full rounded-full bg-surface-muted px-4 py-2.5 text-sm text-ink placeholder:text-ink-muted focus:outline-none"
+            />
+            <button
+              type="button"
+              disabled={!canSaveTitle || isSavingTitle}
+              onClick={handleSaveTitle}
+              className="shrink-0 rounded-full bg-primary px-3.5 py-2.5 text-xs font-semibold text-primary-foreground transition-opacity disabled:opacity-50"
+            >
+              {isSavingTitle ? "Saving..." : "Save"}
+            </button>
+          </div>
+        ) : (
+          <p className="px-1 text-center text-xs text-ink-muted">
+            Only the group's owner or admins can rename it or change its photo.
+          </p>
+        )}
+
+        {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
+      </div>
+    </div>
+  );
+}
+
 function ComingSoonIconButton({
   label,
   children,
@@ -365,12 +514,16 @@ export function ChatView() {
     closeChat,
     removeChatFromList,
     deleteMessages,
+    updateGroupTitle,
+    updateGroupAvatar,
+    removeGroupAvatar,
   } = useChat();
   const [draft, setDraft] = useState("");
   const [members, setMembers] = useState<ChatMemberProfile[]>([]);
   const [isLoadingMembers, setIsLoadingMembers] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showMembersModal, setShowMembersModal] = useState(false);
+  const [showEditGroupModal, setShowEditGroupModal] = useState(false);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isTypingRef = useRef(false);
   const draftInputRef = useRef<HTMLInputElement>(null);
@@ -394,6 +547,7 @@ export function ChatView() {
   useEffect(() => {
     setShowEmojiPicker(false);
     setShowMembersModal(false);
+    setShowEditGroupModal(false);
   }, [activeChat?.chatId]);
 
   // Fetch member names for the group header subtitle - not needed for direct chats,
@@ -526,34 +680,48 @@ export function ChatView() {
         >
           <ArrowLeftIcon className="h-4.5 w-4.5 stroke-[2.5]" />
         </button>
-        <div className="relative shrink-0">
-          <Avatar
-            src={isGroup ? null : activeChat.peer?.avatar_url}
-            label={isGroup ? activeChat.title ?? "Group" : activeChat.peer?.display_name ?? "?"}
-            className="h-9 w-9"
-          />
-          {!isGroup && presence?.status === "online" && (
-            <span className="absolute bottom-0 right-0 h-2 w-2 rounded-full border-2 border-surface bg-primary" />
-          )}
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-ink">
-            {isGroup ? activeChat.title ?? "Group chat" : activeChat.peer?.display_name}
-          </p>
-          {isGroup && isLoadingMembers ? (
-            <Skeleton className="mt-1 h-3 w-28" />
-          ) : (
-            <p
-              className={`truncate text-xs ${
-                (isGroup && typingNamesLine) || (!isGroup && (isPeerTyping || presence?.status === "online"))
-                  ? "text-primary"
-                  : "text-ink-muted"
-              } ${isPeerTyping || typingNamesLine ? "italic" : ""}`}
-            >
-              {statusLine}
-            </p>
-          )}
-        </div>
+        {isGroup ? (
+          <button
+            type="button"
+            onClick={() => setShowEditGroupModal(true)}
+            className="flex min-w-0 flex-1 items-center gap-3 rounded-lg text-left transition-colors hover:bg-surface-muted"
+          >
+            <Avatar src={activeChat.avatarUrl} label={activeChat.title ?? "Group"} className="h-9 w-9 shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-ink">{activeChat.title ?? "Group chat"}</p>
+              {isLoadingMembers ? (
+                <Skeleton className="mt-1 h-3 w-28" />
+              ) : (
+                <p className={`truncate text-xs ${typingNamesLine ? "italic text-primary" : "text-ink-muted"}`}>
+                  {statusLine}
+                </p>
+              )}
+            </div>
+          </button>
+        ) : (
+          <>
+            <div className="relative shrink-0">
+              <Avatar
+                src={activeChat.peer?.avatar_url}
+                label={activeChat.peer?.display_name ?? "?"}
+                className="h-9 w-9"
+              />
+              {presence?.status === "online" && (
+                <span className="absolute bottom-0 right-0 h-2 w-2 rounded-full border-2 border-surface bg-primary" />
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-ink">{activeChat.peer?.display_name}</p>
+              <p
+                className={`truncate text-xs ${
+                  isPeerTyping || presence?.status === "online" ? "text-primary" : "text-ink-muted"
+                } ${isPeerTyping ? "italic" : ""}`}
+              >
+                {statusLine}
+              </p>
+            </div>
+          </>
+        )}
         <div className="flex shrink-0 items-center gap-1">
           {isGroup ? (
             <GroupAvatarStack
@@ -655,6 +823,22 @@ export function ChatView() {
             setShowMembersModal(false);
             removeChatFromList(activeChat.chatId);
           }}
+        />
+      )}
+
+      {showEditGroupModal && isGroup && (
+        <EditGroupModal
+          title={activeChat.title}
+          avatarUrl={activeChat.avatarUrl}
+          canManage={members.some(
+            (member) =>
+              member.user_id === profile?.user_id &&
+              (member.role === "owner" || member.role === "admin"),
+          )}
+          onClose={() => setShowEditGroupModal(false)}
+          onRename={(nextTitle) => updateGroupTitle(chat.chatId, nextTitle)}
+          onAvatarChange={(file) => updateGroupAvatar(chat.chatId, file)}
+          onAvatarRemove={() => removeGroupAvatar(chat.chatId)}
         />
       )}
     </div>

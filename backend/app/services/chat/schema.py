@@ -44,7 +44,7 @@ class Chat(BaseModel):
     chat_id: str
     chat_type: ChatType
     title: str | None = None
-    avatar_media_id: str | None = None
+    avatar_url: str | None = None
     created_by: str
     created_at: int
 
@@ -84,6 +84,12 @@ class AddMember(BaseModel):
     """Request to add a user to an existing group chat."""
 
     user_id: str
+
+
+class UpdateGroupChat(BaseModel):
+    """Request to rename an existing group chat."""
+
+    title: str = Field(min_length=1, max_length=100)
 
 
 class ChatCreated(BaseModel):

@@ -143,7 +143,7 @@ function ChatRow({
     >
       <div className="relative shrink-0">
         <Avatar
-          src={chat.chat_type === "group" ? null : chat.peer?.avatar_url}
+          src={chat.chat_type === "group" ? chat.avatar_url : chat.peer?.avatar_url}
           label={chat.chat_type === "group" ? chat.title ?? "Group" : chat.peer?.display_name ?? "?"}
           className="h-10 w-10"
         />

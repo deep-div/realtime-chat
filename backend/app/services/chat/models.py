@@ -12,7 +12,9 @@ class ChatModel(Base):
     chat_id: Mapped[str] = mapped_column(String, primary_key=True)
     chat_type: Mapped[str] = mapped_column(String)
     title: Mapped[str | None] = mapped_column(String, nullable=True)
-    avatar_media_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    # Column is still named avatar_media_id at the DB level (pre-existing, unused),
+    # repurposed here to hold the group photo's public URL - avoids a migration.
+    avatar_url: Mapped[str | None] = mapped_column("avatar_media_id", String, nullable=True)
     created_by: Mapped[str] = mapped_column(String)
     created_at: Mapped[int] = mapped_column(BigInteger)
 

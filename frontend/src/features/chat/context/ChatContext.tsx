@@ -14,11 +14,14 @@ import {
   deleteMessages as deleteMessagesApi,
   getChatMessages,
   listMyChats,
+  removeGroupAvatar as removeGroupAvatarApi,
+  updateGroupChat as updateGroupChatApi,
+  uploadGroupAvatar as uploadGroupAvatarApi,
 } from "../api";
 import { encryptForPeer } from "../crypto";
 import { useIdentityPrivateKey } from "../hooks/useIdentityKey";
 import { ChatSocket } from "../socket";
-import type { ActiveChat, ChatMessage, ChatSummary, UserPresence } from "../types";
+import type { ActiveChat, Chat, ChatMessage, ChatSummary, UserPresence } from "../types";
 
 /** Used only when the peer has no public key uploaded yet - see encryptForPeer. */
 const PLACEHOLDER_SCHEME = "plaintext-v0";
@@ -39,6 +42,9 @@ interface ChatContextValue {
   removeChatFromList: (chatId: string) => void;
   startDirectChat: (peer: Profile) => Promise<void>;
   createGroupChat: (title: string, memberIds: string[]) => Promise<void>;
+  updateGroupTitle: (chatId: string, title: string) => Promise<void>;
+  updateGroupAvatar: (chatId: string, file: File) => Promise<void>;
+  removeGroupAvatar: (chatId: string) => Promise<void>;
   sendMessage: (text: string) => void;
   setTyping: (chatId: string, isTyping: boolean) => void;
   deleteMessages: (chatId: string, messageIds: string[]) => Promise<void>;
@@ -204,6 +210,14 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           return { ...prev, [chatId]: next };
         });
       },
+      onChatUpdated: ({ chatId, title, avatarUrl }) => {
+        setChats((prev) =>
+          prev.map((c) => (c.chat_id === chatId ? { ...c, title, avatar_url: avatarUrl } : c)),
+        );
+        if (activeChatRef.current?.chatId === chatId) {
+          setActiveChatAndRef({ ...activeChatRef.current, title, avatarUrl });
+        }
+      },
       onMembershipChange: ({ chatId, userId, added }) => {
         setMembershipVersionByChatId((prev) => ({ ...prev, [chatId]: (prev[chatId] ?? 0) + 1 }));
         const isSelf = userId === profile?.user_id;
@@ -305,6 +319,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       chatType: chat.chat_type,
       peer: chat.peer,
       title: chat.title,
+      avatarUrl: chat.avatar_url,
     });
     setChats((prev) =>
       prev.map((c) => (c.chat_id === chat.chat_id ? { ...c, unread_count: 0 } : c)),
@@ -336,7 +351,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     // Get-or-create the chat row, but don't add it to the visible chat list yet - like
     // WhatsApp, a chat only shows up (on either side) once a message has actually been sent.
     const chat = await createDirectChat(peer.user_id);
-    setActiveChatAndRef({ chatId: chat.chat_id, chatType: "direct", peer, title: null });
+    setActiveChatAndRef({ chatId: chat.chat_id, chatType: "direct", peer, title: null, avatarUrl: null });
     await loadMessagesIfNeeded(chat.chat_id);
   }
 
@@ -346,7 +361,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       chat_id: chat.chat_id,
       chat_type: "group",
       title: chat.title,
-      avatar_media_id: null,
+      avatar_url: null,
       created_by: profile?.user_id ?? "",
       created_at: chat.created_at,
       peer: null,
@@ -356,8 +371,44 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       unread_count: 0,
     };
     setChats((prev) => [summary, ...prev.filter((c) => c.chat_id !== chat.chat_id)]);
-    setActiveChatAndRef({ chatId: chat.chat_id, chatType: "group", peer: null, title: chat.title });
+    setActiveChatAndRef({
+      chatId: chat.chat_id,
+      chatType: "group",
+      peer: null,
+      title: chat.title,
+      avatarUrl: null,
+    });
     await loadMessagesIfNeeded(chat.chat_id);
+  }
+
+  function applyChatUpdate(updated: Chat) {
+    setChats((prev) =>
+      prev.map((c) =>
+        c.chat_id === updated.chat_id ? { ...c, title: updated.title, avatar_url: updated.avatar_url } : c,
+      ),
+    );
+    if (activeChatRef.current?.chatId === updated.chat_id) {
+      setActiveChatAndRef({
+        ...activeChatRef.current,
+        title: updated.title,
+        avatarUrl: updated.avatar_url,
+      });
+    }
+  }
+
+  async function updateGroupTitle(chatId: string, title: string) {
+    const updated = await updateGroupChatApi(chatId, title);
+    applyChatUpdate(updated);
+  }
+
+  async function updateGroupAvatar(chatId: string, file: File) {
+    const updated = await uploadGroupAvatarApi(chatId, file);
+    applyChatUpdate(updated);
+  }
+
+  async function removeGroupAvatar(chatId: string) {
+    const updated = await removeGroupAvatarApi(chatId);
+    applyChatUpdate(updated);
   }
 
   function setTyping(chatId: string, isTyping: boolean) {
@@ -398,7 +449,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
             chat_id: activeChat.chatId,
             chat_type: activeChat.chatType,
             title: activeChat.title,
-            avatar_media_id: null,
+            avatar_url: activeChat.avatarUrl,
             created_by: profile?.user_id ?? "",
             created_at: now,
             peer: activeChat.peer,
@@ -449,6 +500,9 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       removeChatFromList,
       startDirectChat,
       createGroupChat,
+      updateGroupTitle,
+      updateGroupAvatar,
+      removeGroupAvatar,
       sendMessage,
       setTyping,
       deleteMessages,

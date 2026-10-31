@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_current_user_id
 from app.clients.postgre import get_db
-from app.clients.storage import upload_avatar
+from app.clients.storage import ALLOWED_AVATAR_TYPES, MAX_AVATAR_SIZE_BYTES, upload_avatar
 from app.services.users.schema import CreateProfile, SetPublicKey, UpdateProfile, User
 from app.services.users.store import (
     ProfileAlreadyExistsError,
@@ -13,9 +13,6 @@ from app.services.users.store import (
 )
 
 router = APIRouter(prefix="/users")
-
-ALLOWED_AVATAR_TYPES = {"image/jpeg", "image/png", "image/webp"}
-MAX_AVATAR_SIZE_BYTES = 5 * 1024 * 1024
 
 
 @router.post("/me", response_model=User, status_code=status.HTTP_201_CREATED)

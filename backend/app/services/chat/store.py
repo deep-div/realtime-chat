@@ -184,7 +184,7 @@ class ChatStore:
             chat_id=chat_id,
             chat_type=ChatType.DIRECT.value,
             title=None,
-            avatar_media_id=None,
+            avatar_url=None,
             created_by=requester_id,
             created_at=now,
             direct_user_min=user_min,
@@ -226,7 +226,7 @@ class ChatStore:
             chat_id=chat_id,
             chat_type=ChatType.GROUP.value,
             title=request.title,
-            avatar_media_id=None,
+            avatar_url=None,
             created_by=requester_id,
             created_at=now,
             direct_user_min=None,
@@ -309,6 +309,52 @@ class ChatStore:
         await session.commit()
         await self._invalidate_members_cache(chat_id)
         await self._invalidate_user_chats_cache(user_id)
+
+    async def _require_group_admin(
+        self, session: AsyncSession, chat_id: str, requester_id: str
+    ) -> tuple[ChatModel, list[ChatMember]]:
+        """Load a group chat and assert requester_id is its OWNER/ADMIN. Shared by update_title/update_avatar."""
+        chat_row = await session.get(ChatModel, chat_id)
+        if chat_row is None:
+            raise ChatNotFoundError(chat_id)
+        if chat_row.chat_type != ChatType.GROUP.value:
+            raise NotAGroupChatError(chat_id)
+
+        members = await self.list_members(session, chat_id)
+        requester = next((m for m in members if m.user_id == requester_id), None)
+        if requester is None:
+            raise NotAMemberError(requester_id)
+        if requester.role not in (ChatRole.OWNER, ChatRole.ADMIN):
+            raise InsufficientRoleError(requester_id)
+        return chat_row, members
+
+    async def update_title(
+        self, session: AsyncSession, chat_id: str, requester_id: str, title: str
+    ) -> Chat:
+        """Rename a group chat. Only an OWNER/ADMIN of that chat may do this."""
+        chat_row, members = await self._require_group_admin(session, chat_id, requester_id)
+        chat_row.title = title
+        await session.commit()
+
+        chat = self._row_to_chat(chat_row)
+        await self._cache_chat(chat)
+        for member in members:
+            await self._invalidate_user_chats_cache(member.user_id)
+        return chat
+
+    async def update_avatar(
+        self, session: AsyncSession, chat_id: str, requester_id: str, avatar_url: str | None
+    ) -> Chat:
+        """Set or clear a group chat's photo. Only an OWNER/ADMIN of that chat may do this."""
+        chat_row, members = await self._require_group_admin(session, chat_id, requester_id)
+        chat_row.avatar_url = avatar_url
+        await session.commit()
+
+        chat = self._row_to_chat(chat_row)
+        await self._cache_chat(chat)
+        for member in members:
+            await self._invalidate_user_chats_cache(member.user_id)
+        return chat
 
     async def get_chat(self, session: AsyncSession, chat_id: str) -> Chat | None:
         """Fetch one chat by id, or None if it doesn't exist. Reads Redis before Postgres."""
@@ -480,7 +526,7 @@ class ChatStore:
             chat_id=row.chat_id,
             chat_type=ChatType(row.chat_type),
             title=row.title,
-            avatar_media_id=row.avatar_media_id,
+            avatar_url=row.avatar_url,
             created_by=row.created_by,
             created_at=row.created_at,
         )
