@@ -27,12 +27,12 @@ import person7 from "../../assests/person7.png";
 
 const SUGGESTED_PEOPLE = [
   { name: "Ananya Sharma", username: "ananyas", avatar: person1 },
-  { name: "Liam Carter", username: "liamc", avatar: person2 },
-  { name: "Priya Verma", username: "priyav", avatar: person3 },
-  { name: "Noah Williams", username: "noahw", avatar: person4 },
-  { name: "Sophia Kapoor", username: "sophiak", avatar: person5 },
-  { name: "Arjun Mehta", username: "arjunm", avatar: person6 },
-  { name: "Olivia Bennett", username: "oliviab", avatar: person7 },
+  { name: "Aarav Mehta", username: "aaravm", avatar: person2 },
+  { name: "Riya Verma", username: "riyav", avatar: person3 },
+  { name: "Rohan Kapoor", username: "rohank", avatar: person4 },
+  { name: "Ishita Malhotra", username: "ishitam", avatar: person5 },
+  { name: "Arjun Patel", username: "arjunp", avatar: person6 },
+  { name: "Kavya Reddy", username: "kavyar", avatar: person7 },
 ];
 
 function formatChatTimestamp(timestamp: number): string {
