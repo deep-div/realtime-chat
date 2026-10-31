@@ -26,11 +26,30 @@ import person7 from "../../assests/person7.png";
 
 interface SuggestedPreview {
   title: string;
-  avatar: string;
+  avatar?: string;
+  // Set for the mock group row instead of `avatar` - rendered as a stacked-photo
+  // avatar, same visual language as a real group's member stack.
+  groupAvatars?: string[];
   sender: string | null;
   message: string;
   time: string;
   unreadCount?: number;
+}
+
+function GroupAvatarPreview({ avatars }: { avatars: string[] }) {
+  return (
+    <div className="flex h-11 w-11 shrink-0 items-center">
+      {avatars.slice(0, 3).map((avatar, index) => (
+        <div
+          key={avatar}
+          className="rounded-full ring-2 ring-surface"
+          style={{ marginLeft: index === 0 ? 0 : -14, zIndex: 3 - index }}
+        >
+          <Avatar src={avatar} label="" className="h-7 w-7" />
+        </div>
+      ))}
+    </div>
+  );
 }
 
 // Purely decorative mock inbox shown when logged out - gives the sidebar some life
@@ -41,8 +60,29 @@ const SUGGESTED_PREVIEWS: SuggestedPreview[] = [
   { title: "Riya Verma", avatar: person3, sender: null, message: "Why aren't you replying? 😅", time: "3:01 PM", unreadCount: 4 },
   { title: "Rohan Kapoor", avatar: person4, sender: null, message: "I'll be there in 5 minutes 🚗", time: "3:00 PM", unreadCount: 2 },
   { title: "Ishita Malhotra", avatar: person5, sender: "Liam", message: "Want to go watch a movie tonight? 🎬", time: "2:59 PM" },
-  { title: "Arjun Patel", avatar: person6, sender: null, message: "Going on vacation! 🏖️", time: "2:46 PM" },
-  { title: "Kavya Reddy", avatar: person7, sender: "Arjun", message: "Let's meet at the library tonight 📚", time: "2:34 PM", unreadCount: 1 },
+  {
+    title: "Beach Vacation Crew 🏖️",
+    groupAvatars: [person6, person1, person4],
+    sender: "Arjun",
+    message: "Going on vacation next week, who's in?",
+    time: "2:46 PM",
+  },
+  {
+    title: "Study Group 📚",
+    groupAvatars: [person7, person3, person6],
+    sender: "Kavya",
+    message: "Let's meet at the library tonight",
+    time: "2:34 PM",
+    unreadCount: 1,
+  },
+  {
+    title: "Weekend Trip Squad 🏕️",
+    groupAvatars: [person3, person5, person2],
+    sender: "Priya",
+    message: "Let's finalize the packing list tonight",
+    time: "1:46 PM",
+    unreadCount: 3,
+  },
 ];
 
 function formatChatTimestamp(timestamp: number): string {
@@ -269,7 +309,11 @@ export function Sidebar({ focusSearch = false }: SidebarProps) {
               onClick={() => setShowSignIn(true)}
               className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-surface-muted"
             >
-              <Avatar src={preview.avatar} label={preview.title} className="h-11 w-11 shrink-0" />
+              {preview.groupAvatars ? (
+                <GroupAvatarPreview avatars={preview.groupAvatars} />
+              ) : (
+                <Avatar src={preview.avatar} label={preview.title} className="h-11 w-11 shrink-0" />
+              )}
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-2">
                   <p className="truncate text-sm font-medium text-ink">{preview.title}</p>
