@@ -1,3 +1,4 @@
+import asyncio
 import time
 import uuid
 
@@ -118,9 +119,23 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
         await deliver_backlog(session, handshake.user_id, websocket, local_connections)
     await connection_registry.mark_ready(connection_id)
 
+    # A browser close doesn't always deliver a clean WebSocket close frame (tab killed,
+    # laptop sleeps, network drops) - without this, such connections only disappear once
+    # Redis quietly expires them, and no one is ever told the user went offline. Timing
+    # out the read after the same window the connection's TTL uses lets us treat a silent
+    # connection exactly like an explicit disconnect.
+    receive_timeout_seconds = CONNECTION_TTL_SECONDS
+
     try:
         while True:
-            message = await websocket.receive_json()
+            try:
+                message = await asyncio.wait_for(
+                    websocket.receive_json(), timeout=receive_timeout_seconds
+                )
+            except asyncio.TimeoutError:
+                logger.info(f"connection timed out (no heartbeat): {connection_id} user={handshake.user_id}")
+                await websocket.close(code=status.WS_1001_GOING_AWAY)
+                raise WebSocketDisconnect(code=status.WS_1001_GOING_AWAY)
             if message.get("type") == "heartbeat":
                 await connection_registry.heartbeat(connection_id)
             elif message.get("type") == "get_presence":
