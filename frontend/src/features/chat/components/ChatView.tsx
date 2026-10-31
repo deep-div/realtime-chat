@@ -6,8 +6,9 @@ import { MessageStatusTicks } from "../../../components/ui/MessageStatusTicks";
 import { PhoneIcon } from "../../../components/ui/PhoneIcon";
 import { SearchIcon } from "../../../components/ui/SearchIcon";
 import { Skeleton } from "../../../components/ui/Skeleton";
+import { ContextMenu } from "../../../components/ui/ContextMenu";
+import { useContextMenu } from "../../../components/ui/useContextMenu";
 import { SmileIcon } from "../../../components/ui/SmileIcon";
-import { TrashIcon } from "../../../components/ui/TrashIcon";
 import { VideoIcon } from "../../../components/ui/VideoIcon";
 import { useAuth } from "../../auth/hooks/useAuth";
 import { searchUsers } from "../../profile/api";
@@ -293,22 +294,16 @@ function MessageBubble({
   const text = useDecryptedText(message.content, privateKey, peerPublicKey);
   const isDeleted = !!message.deleted_at;
   const canDelete = isMine && !isDeleted && message.localStatus !== "sending" && message.localStatus !== "error";
+  const { position, close, consumeSuppressedClick, triggerProps } = useContextMenu();
 
   return (
-    <div className={`group flex items-center gap-1.5 ${isMine ? "justify-end" : "justify-start"}`}>
-      {canDelete && (
-        <button
-          type="button"
-          aria-label="Delete message"
-          title="Delete message"
-          onClick={() => onDelete(message.message_id)}
-          className="shrink-0 rounded-full p-1.5 text-ink-muted opacity-0 transition-opacity hover:bg-surface-muted hover:text-red-500 group-hover:opacity-100"
-        >
-          <TrashIcon className="h-3.5 w-3.5" />
-        </button>
-      )}
+    <div className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
       <div
-        className={`max-w-[70%] rounded-2xl px-4 py-2 text-sm shadow-sm ${
+        {...(canDelete ? triggerProps : {})}
+        onClick={() => {
+          consumeSuppressedClick();
+        }}
+        className={`max-w-[70%] rounded-2xl px-4 py-2 text-sm shadow-sm ${canDelete ? "select-none" : ""} ${
           isDeleted
             ? "bg-surface italic text-ink-muted"
             : isMine
@@ -323,6 +318,13 @@ function MessageBubble({
           </div>
         )}
       </div>
+      {canDelete && position && (
+        <ContextMenu
+          position={position}
+          onClose={close}
+          items={[{ label: "Delete message", destructive: true, onSelect: () => onDelete(message.message_id) }]}
+        />
+      )}
     </div>
   );
 }
