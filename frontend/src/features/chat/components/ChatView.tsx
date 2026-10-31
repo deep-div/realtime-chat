@@ -433,6 +433,7 @@ export function ChatView() {
   }
 
   if (!activeChat) return null;
+  const chat = activeChat;
 
   const isGroup = activeChat.chatType === "group";
   const presence = activeChat.peer ? presenceByUserId[activeChat.peer.user_id] : undefined;
@@ -467,7 +468,7 @@ export function ChatView() {
     }
     if (isTypingRef.current) {
       isTypingRef.current = false;
-      setTyping(activeChat.chatId, false);
+      setTyping(chat.chatId, false);
     }
   }
 
@@ -481,7 +482,7 @@ export function ChatView() {
 
     if (!isTypingRef.current) {
       isTypingRef.current = true;
-      setTyping(activeChat.chatId, true);
+      setTyping(chat.chatId, true);
     }
 
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
@@ -496,7 +497,7 @@ export function ChatView() {
 
   function handleDeleteMessage(messageId: string) {
     if (!window.confirm("Delete this message for everyone?")) return;
-    deleteMessages(activeChat.chatId, [messageId]).catch(() => {
+    deleteMessages(chat.chatId, [messageId]).catch(() => {
       window.alert("Couldn't delete the message. Please try again.");
     });
   }

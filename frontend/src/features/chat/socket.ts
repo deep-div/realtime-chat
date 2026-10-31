@@ -43,8 +43,11 @@ export class ChatSocket {
   private readonly sessionId = crypto.randomUUID();
   private handshakeSent = false;
   private sendQueue: string[] = [];
+  private readonly handlers: ChatSocketHandlers;
 
-  constructor(private readonly handlers: ChatSocketHandlers) {}
+  constructor(handlers: ChatSocketHandlers) {
+    this.handlers = handlers;
+  }
 
   async connect(): Promise<void> {
     this.intentionallyClosed = false;
