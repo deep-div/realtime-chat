@@ -252,6 +252,7 @@ function GroupMembersModal({
 function EditGroupModal({
   title,
   avatarUrl,
+  members,
   canManage,
   onClose,
   onRename,
@@ -260,6 +261,7 @@ function EditGroupModal({
 }: {
   title: string | null;
   avatarUrl: string | null;
+  members: ChatMemberProfile[];
   canManage: boolean;
   onClose: () => void;
   onRename: (title: string) => Promise<void>;
@@ -387,9 +389,29 @@ function EditGroupModal({
             </button>
           </div>
         ) : (
-          <p className="px-1 text-center text-xs text-ink-muted">
-            Only the group's owner or admins can rename it or change its photo.
-          </p>
+          <div className="flex flex-col items-center gap-2 px-1 text-center">
+            {members.length > 0 && (
+              <div className="flex items-center">
+                {members.slice(0, AVATAR_STACK_VISIBLE_COUNT).map((member, index) => (
+                  <div
+                    key={member.user_id}
+                    className="rounded-full ring-2 ring-surface"
+                    style={{ marginLeft: index === 0 ? 0 : -10, zIndex: AVATAR_STACK_VISIBLE_COUNT - index }}
+                  >
+                    <Avatar
+                      src={member.profile?.avatar_url}
+                      label={member.profile?.display_name ?? "?"}
+                      className="h-8 w-8"
+                      textClassName="text-xs"
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+            <p className="text-xs text-ink-muted">
+              Only the group's owner or admins can rename it or change its photo.
+            </p>
+          </div>
         )}
 
         {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
@@ -830,6 +852,7 @@ export function ChatView() {
         <EditGroupModal
           title={activeChat.title}
           avatarUrl={activeChat.avatarUrl}
+          members={members}
           canManage={members.some(
             (member) =>
               member.user_id === profile?.user_id &&
