@@ -94,6 +94,8 @@ ipython_config.py
 
 # Migrations
 versions/
+!alembic/versions/
+!alembic/versions/*.py
 
 
 # pyenv

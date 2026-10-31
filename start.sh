@@ -8,13 +8,17 @@ if [ -n "${FIREBASE_CREDENTIALS_JSON:-}" ]; then
   echo "${FIREBASE_CREDENTIALS_JSON}" > ./secrets/firebase-adminsdk.json
 fi
 
+mkdir -p alembic/versions
+if [ -z "$(find alembic/versions -maxdepth 1 -name '*.py' -print -quit 2>/dev/null)" ]; then
+  alembic revision --autogenerate -m "create schema"
+fi
+alembic upgrade head
+
 REDIS_PID=""
 if [ "${REDIS_HOST:-localhost}" = "localhost" ] || [ "${REDIS_HOST:-localhost}" = "127.0.0.1" ]; then
   redis-server --daemonize no --bind 127.0.0.1 --port "${REDIS_PORT:-6379}" &
   REDIS_PID=$!
 fi
-
-alembic upgrade head
 
 uvicorn app.main:app --host 127.0.0.1 --port 8000 &
 UVICORN_PID=$!
