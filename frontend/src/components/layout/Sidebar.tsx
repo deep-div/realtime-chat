@@ -10,7 +10,6 @@ import { searchUsers } from "../../features/profile/api";
 import type { Profile } from "../../features/profile/types";
 import { Avatar } from "../ui/Avatar";
 import { ArrowLeftIcon } from "../ui/ArrowLeftIcon";
-import { ChatBubbleIcon } from "../ui/ChatBubbleIcon";
 import { PlusIcon } from "../ui/PlusIcon";
 import { SearchIcon } from "../ui/SearchIcon";
 import { ContextMenu } from "../ui/ContextMenu";
@@ -25,14 +24,25 @@ import person5 from "../../assests/person5.png";
 import person6 from "../../assests/person6.png";
 import person7 from "../../assests/person7.png";
 
-const SUGGESTED_PEOPLE = [
-  { name: "Ananya Sharma", username: "ananyas", avatar: person1 },
-  { name: "Aarav Mehta", username: "aaravm", avatar: person2 },
-  { name: "Riya Verma", username: "riyav", avatar: person3 },
-  { name: "Rohan Kapoor", username: "rohank", avatar: person4 },
-  { name: "Ishita Malhotra", username: "ishitam", avatar: person5 },
-  { name: "Arjun Patel", username: "arjunp", avatar: person6 },
-  { name: "Kavya Reddy", username: "kavyar", avatar: person7 },
+interface SuggestedPreview {
+  title: string;
+  avatar: string;
+  sender: string | null;
+  message: string;
+  time: string;
+  unreadCount?: number;
+}
+
+// Purely decorative mock inbox shown when logged out - gives the sidebar some life
+// instead of an empty state, and doubles as a "here's what you're missing" nudge to sign in.
+const SUGGESTED_PREVIEWS: SuggestedPreview[] = [
+  { title: "Ananya Sharma", avatar: person1, sender: null, message: "How's the trip going so far? ✈️", time: "5:11 PM", unreadCount: 12 },
+  { title: "Aarav Mehta", avatar: person2, sender: null, message: "I'll share the itinerary with everyone 🥑", time: "4:12 PM" },
+  { title: "Riya Verma", avatar: person3, sender: null, message: "Why aren't you replying? 😅", time: "3:01 PM", unreadCount: 4 },
+  { title: "Rohan Kapoor", avatar: person4, sender: null, message: "I'll be there in 5 minutes 🚗", time: "3:00 PM", unreadCount: 2 },
+  { title: "Ishita Malhotra", avatar: person5, sender: "Liam", message: "Want to go watch a movie tonight? 🎬", time: "2:59 PM" },
+  { title: "Arjun Patel", avatar: person6, sender: null, message: "Going on vacation! 🏖️", time: "2:46 PM" },
+  { title: "Kavya Reddy", avatar: person7, sender: "Arjun", message: "Let's meet at the library tonight 📚", time: "2:34 PM", unreadCount: 1 },
 ];
 
 function formatChatTimestamp(timestamp: number): string {
@@ -241,10 +251,10 @@ export function Sidebar({ focusSearch = false }: SidebarProps) {
       <aside className="relative flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden">
         <div className="px-5 pt-6">
           <h2 className="text-base font-semibold tracking-tight text-ink">
-            Suggested people
+            Your conversations are waiting 👋
           </h2>
           <p className="mt-0.5 text-xs text-ink-muted">
-            Find interesting people to chat with
+            Sign in to see what you've missed
           </p>
         </div>
 
@@ -252,22 +262,37 @@ export function Sidebar({ focusSearch = false }: SidebarProps) {
           {isSuggestedLoading ? (
             <ChatListSkeleton />
           ) : (
-          SUGGESTED_PEOPLE.map((person) => (
+          SUGGESTED_PREVIEWS.map((preview) => (
             <button
-              key={person.username}
+              key={preview.title}
               type="button"
               onClick={() => setShowSignIn(true)}
               className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-surface-muted"
             >
-              <Avatar src={person.avatar} label={person.name} className="h-11 w-11 shrink-0" />
+              <Avatar src={preview.avatar} label={preview.title} className="h-11 w-11 shrink-0" />
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-ink">{person.name}</p>
-                <p className="truncate text-xs text-ink-muted">@{person.username}</p>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="truncate text-sm font-medium text-ink">{preview.title}</p>
+                  <span
+                    className={`shrink-0 text-[11px] ${
+                      preview.unreadCount ? "font-semibold text-primary" : "text-ink-muted"
+                    }`}
+                  >
+                    {preview.time}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="truncate text-xs text-ink-muted">
+                    {preview.sender && <span className="font-medium text-ink">{preview.sender}: </span>}
+                    {preview.message}
+                  </p>
+                  {!!preview.unreadCount && (
+                    <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-semibold text-primary-foreground">
+                      {preview.unreadCount > 99 ? "99+" : preview.unreadCount}
+                    </span>
+                  )}
+                </div>
               </div>
-              <span className="flex shrink-0 items-center gap-1.5 rounded-lg bg-primary-soft px-3.5 py-2 text-xs font-semibold text-primary">
-                <ChatBubbleIcon className="h-4 w-4" />
-                Message
-              </span>
             </button>
           ))
           )}
