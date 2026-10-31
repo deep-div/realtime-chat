@@ -369,6 +369,25 @@ function EditGroupModal({
           )}
         </div>
 
+        {members.length > 0 && (
+          <div className="mb-3 flex items-center justify-center">
+            {members.slice(0, AVATAR_STACK_VISIBLE_COUNT).map((member, index) => (
+              <div
+                key={member.user_id}
+                className="rounded-full ring-2 ring-surface"
+                style={{ marginLeft: index === 0 ? 0 : -10, zIndex: AVATAR_STACK_VISIBLE_COUNT - index }}
+              >
+                <Avatar
+                  src={member.profile?.avatar_url}
+                  label={member.profile?.display_name ?? "?"}
+                  className="h-8 w-8"
+                  textClassName="text-xs"
+                />
+              </div>
+            ))}
+          </div>
+        )}
+
         {canManage ? (
           <div className="mb-1 flex items-center gap-2">
             <input
@@ -389,29 +408,9 @@ function EditGroupModal({
             </button>
           </div>
         ) : (
-          <div className="flex flex-col items-center gap-2 px-1 text-center">
-            {members.length > 0 && (
-              <div className="flex items-center">
-                {members.slice(0, AVATAR_STACK_VISIBLE_COUNT).map((member, index) => (
-                  <div
-                    key={member.user_id}
-                    className="rounded-full ring-2 ring-surface"
-                    style={{ marginLeft: index === 0 ? 0 : -10, zIndex: AVATAR_STACK_VISIBLE_COUNT - index }}
-                  >
-                    <Avatar
-                      src={member.profile?.avatar_url}
-                      label={member.profile?.display_name ?? "?"}
-                      className="h-8 w-8"
-                      textClassName="text-xs"
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
-            <p className="text-xs text-ink-muted">
-              Only the group's owner or admins can rename it or change its photo.
-            </p>
-          </div>
+          <p className="px-1 text-center text-xs text-ink-muted">
+            Only the group's owner or admins can rename it or change its photo.
+          </p>
         )}
 
         {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
