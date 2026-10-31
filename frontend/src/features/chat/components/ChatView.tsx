@@ -7,6 +7,7 @@ import { PhoneIcon } from "../../../components/ui/PhoneIcon";
 import { SearchIcon } from "../../../components/ui/SearchIcon";
 import { Skeleton } from "../../../components/ui/Skeleton";
 import { SmileIcon } from "../../../components/ui/SmileIcon";
+import { TrashIcon } from "../../../components/ui/TrashIcon";
 import { VideoIcon } from "../../../components/ui/VideoIcon";
 import { useAuth } from "../../auth/hooks/useAuth";
 import { searchUsers } from "../../profile/api";
@@ -281,23 +282,42 @@ function MessageBubble({
   isMine,
   privateKey,
   peerPublicKey,
+  onDelete,
 }: {
   message: ChatMessage;
   isMine: boolean;
   privateKey: CryptoKey | null;
   peerPublicKey: string | null | undefined;
+  onDelete: (messageId: string) => void;
 }) {
   const text = useDecryptedText(message.content, privateKey, peerPublicKey);
+  const isDeleted = !!message.deleted_at;
+  const canDelete = isMine && !isDeleted && message.localStatus !== "sending" && message.localStatus !== "error";
 
   return (
-    <div className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
+    <div className={`group flex items-center gap-1.5 ${isMine ? "justify-end" : "justify-start"}`}>
+      {canDelete && (
+        <button
+          type="button"
+          aria-label="Delete message"
+          title="Delete message"
+          onClick={() => onDelete(message.message_id)}
+          className="shrink-0 rounded-full p-1.5 text-ink-muted opacity-0 transition-opacity hover:bg-surface-muted hover:text-red-500 group-hover:opacity-100"
+        >
+          <TrashIcon className="h-3.5 w-3.5" />
+        </button>
+      )}
       <div
         className={`max-w-[70%] rounded-2xl px-4 py-2 text-sm shadow-sm ${
-          isMine ? "bg-primary text-primary-foreground" : "bg-surface text-ink"
+          isDeleted
+            ? "bg-surface italic text-ink-muted"
+            : isMine
+              ? "bg-primary text-primary-foreground"
+              : "bg-surface text-ink"
         }`}
       >
-        <p>{text}</p>
-        {isMine && (
+        <p>{isDeleted ? "This message was deleted" : text}</p>
+        {isMine && !isDeleted && (
           <div className="mt-1 flex justify-end">
             <MessageStatusTicks status={message.localStatus} className="h-3.5 w-3.5 opacity-80" />
           </div>
@@ -333,6 +353,7 @@ export function ChatView() {
     privateKey,
     closeChat,
     removeChatFromList,
+    deleteMessages,
   } = useChat();
   const [draft, setDraft] = useState("");
   const [members, setMembers] = useState<ChatMemberProfile[]>([]);
@@ -456,6 +477,13 @@ export function ChatView() {
     setDraft("");
   }
 
+  function handleDeleteMessage(messageId: string) {
+    if (!window.confirm("Delete this message for everyone?")) return;
+    deleteMessages(activeChat.chatId, [messageId]).catch(() => {
+      window.alert("Couldn't delete the message. Please try again.");
+    });
+  }
+
   function handleEmojiSelect(emoji: string) {
     const input = draftInputRef.current;
     const start = input?.selectionStart ?? draft.length;
@@ -537,6 +565,7 @@ export function ChatView() {
               isMine={message.sender_id === profile?.user_id}
               privateKey={privateKey}
               peerPublicKey={activeChat.peer?.public_key}
+              onDelete={handleDeleteMessage}
             />
           ))
         )}

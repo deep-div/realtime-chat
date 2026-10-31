@@ -5,7 +5,7 @@ from pydantic import Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user_id
-from app.api.endpoints.connections import notify_membership_change
+from app.api.endpoints.connections import notify_membership_change, notify_message_deleted
 from app.api.endpoints.sockets import local_connections
 from app.clients.postgre import get_db
 from app.services.chat.schema import (
@@ -26,8 +26,8 @@ from app.services.chat.store import (
     NotAMemberError,
     chat_store,
 )
-from app.services.messaging.schema import ChatMessage
-from app.services.messaging.store import message_store
+from app.services.messaging.schema import ChatMessage, DeleteMessages
+from app.services.messaging.store import MessageNotFoundError, NotMessageOwnerError, message_store
 from app.services.users.store import user_store
 
 router = APIRouter(prefix="/chats")
@@ -149,6 +149,31 @@ async def get_chat_messages(
         raise HTTPException(status_code=404, detail="chat not found")
 
     return await message_store.get_messages(db, chat_id, limit, after=member.cleared_at)
+
+
+@router.delete("/{chat_id}/messages", response_model=list[ChatMessage])
+async def delete_chat_messages(
+    chat_id: str,
+    request: DeleteMessages,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> list[ChatMessage]:
+    """Delete one or more of the caller's own messages for everyone in the chat. Works for
+    a single message (pass one id) or a bulk delete (pass several)."""
+    try:
+        deleted = await message_store.delete_messages(db, chat_id, user_id, request.message_ids)
+    except NotAMemberError:
+        raise HTTPException(status_code=404, detail="chat not found")
+    except MessageNotFoundError:
+        raise HTTPException(status_code=404, detail="message not found")
+    except NotMessageOwnerError:
+        raise HTTPException(status_code=403, detail="can only delete your own messages")
+
+    recipient_ids = await message_store.get_recipient_ids(db, chat_id, user_id)
+    await notify_message_deleted(
+        chat_id, [message.message_id for message in deleted], recipient_ids, local_connections
+    )
+    return deleted
 
 
 @router.post(

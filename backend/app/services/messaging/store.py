@@ -204,6 +204,53 @@ class MessageStore:
             messages = [m for m in messages if m.sent_at > after]
         return messages
 
+    async def delete_messages(
+        self, session: AsyncSession, chat_id: str, user_id: str, message_ids: list[str]
+    ) -> list[ChatMessage]:
+        """Mark one or more messages deleted-for-everyone. Only the original sender may
+        delete their own message; ciphertext is kept in place, only deleted_at is set, so
+        clients render a placeholder instead of the server losing the underlying record."""
+        members = await chat_store.list_members(session, chat_id)
+        if not any(member.user_id == user_id for member in members):
+            raise NotAMemberError(user_id)
+
+        result = await session.execute(
+            select(MessageModel).where(
+                MessageModel.chat_id == chat_id,
+                MessageModel.message_id.in_(message_ids),
+            )
+        )
+        rows_by_id = {row.message_id: row for row in result.scalars().all()}
+
+        missing = [message_id for message_id in message_ids if message_id not in rows_by_id]
+        if missing:
+            raise MessageNotFoundError(missing[0])
+
+        not_owned = [
+            message_id for message_id, row in rows_by_id.items() if row.sender_id != user_id
+        ]
+        if not_owned:
+            raise NotMessageOwnerError(not_owned[0])
+
+        now = int(time.time() * 1000)
+        deleted: list[ChatMessage] = []
+        for message_id in message_ids:
+            row = rows_by_id[message_id]
+            if row.deleted_at is None:
+                row.deleted_at = now
+            deleted.append(self._row_to_message(row))
+
+        await session.commit()
+        await self._invalidate_message_cache(chat_id)
+        return deleted
+
+    async def _invalidate_message_cache(self, chat_id: str) -> None:
+        """Drop a chat's cached messages after a delete, so the next read refetches from DB."""
+        try:
+            await redis_client.delete(self._cache_key(chat_id))
+        except Exception:
+            logger.warning("message cache invalidation failed", exc_info=True)
+
     async def get_undelivered_messages(
         self, session: AsyncSession, user_id: str
     ) -> list[ChatMessage]:
@@ -270,13 +317,20 @@ class MessageStore:
         return self._row_to_message(row) if row is not None else None
 
     def _row_to_message(self, row: MessageModel) -> ChatMessage:
+        # The DB keeps the ciphertext forever, but a deleted message is never served to
+        # clients - they render a placeholder off deleted_at instead.
+        content = (
+            EncryptedContent(scheme=row.scheme, ciphertext="")
+            if row.deleted_at is not None
+            else EncryptedContent(scheme=row.scheme, ciphertext=row.ciphertext)
+        )
         return ChatMessage(
             message_id=row.message_id,
             chat_id=row.chat_id,
             sender_id=row.sender_id,
             sent_at=row.sent_at,
             client_message_id=row.client_message_id,
-            content=EncryptedContent(scheme=row.scheme, ciphertext=row.ciphertext),
+            content=content,
             edited_at=row.edited_at,
             deleted_at=row.deleted_at,
         )
@@ -284,6 +338,10 @@ class MessageStore:
 
 class MessageNotFoundError(Exception):
     """Raised when a message_id doesn't exist."""
+
+
+class NotMessageOwnerError(Exception):
+    """Raised when a user tries to delete a message they didn't send."""
 
 
 message_store = MessageStore()

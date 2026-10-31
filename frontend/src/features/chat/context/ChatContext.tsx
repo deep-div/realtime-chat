@@ -8,7 +8,13 @@ import {
 } from "react";
 import { useAuth } from "../../auth/hooks/useAuth";
 import type { Profile } from "../../profile/types";
-import { createDirectChat, createGroupChat as createGroupChatApi, getChatMessages, listMyChats } from "../api";
+import {
+  createDirectChat,
+  createGroupChat as createGroupChatApi,
+  deleteMessages as deleteMessagesApi,
+  getChatMessages,
+  listMyChats,
+} from "../api";
 import { encryptForPeer } from "../crypto";
 import { useIdentityPrivateKey } from "../hooks/useIdentityKey";
 import { ChatSocket } from "../socket";
@@ -35,6 +41,7 @@ interface ChatContextValue {
   createGroupChat: (title: string, memberIds: string[]) => Promise<void>;
   sendMessage: (text: string) => void;
   setTyping: (chatId: string, isTyping: boolean) => void;
+  deleteMessages: (chatId: string, messageIds: string[]) => Promise<void>;
 }
 
 export const ChatContext = createContext<ChatContextValue | null>(null);
@@ -81,6 +88,20 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     chatsRef.current = chats;
   }, [chats]);
+
+  function markMessagesDeleted(chatId: string, messageIds: string[]) {
+    const deletedIds = new Set(messageIds);
+    setMessagesByChatId((prev) => {
+      const existing = prev[chatId];
+      if (!existing) return prev;
+      return {
+        ...prev,
+        [chatId]: existing.map((m) =>
+          deletedIds.has(m.message_id) ? { ...m, deleted_at: Date.now(), content: { scheme: m.content.scheme, ciphertext: "" } } : m,
+        ),
+      };
+    });
+  }
 
   useEffect(() => {
     if (!user || !profile) {
@@ -195,6 +216,9 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           // We were just added to a group - fetch its summary so it shows up in the list.
           listMyChats().then(setChats);
         }
+      },
+      onMessageDeleted: ({ chatId, messageIds }) => {
+        markMessagesDeleted(chatId, messageIds);
       },
       onConnected: () => {
         // The backend's watcher list is keyed by connection id, so a reconnect
@@ -393,6 +417,12 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     );
   }
 
+  async function deleteMessages(chatId: string, messageIds: string[]) {
+    if (messageIds.length === 0) return;
+    await deleteMessagesApi(chatId, messageIds);
+    markMessagesDeleted(chatId, messageIds);
+  }
+
   const value = useMemo<ChatContextValue>(
     () => ({
       chats,
@@ -412,6 +442,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       createGroupChat,
       sendMessage,
       setTyping,
+      deleteMessages,
     }),
     [
       chats,

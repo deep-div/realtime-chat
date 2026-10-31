@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class MessageStatus(str, Enum):
@@ -55,6 +55,12 @@ class MessageAck(BaseModel):
     chat_id: str
     message_id: str
     status: Literal[MessageStatus.READ] = MessageStatus.READ
+
+
+class DeleteMessages(BaseModel):
+    """Request to delete one or more of the caller's own messages, for everyone in the chat."""
+
+    message_ids: list[str] = Field(min_length=1)
 
 
 class MessageReceipt(BaseModel):

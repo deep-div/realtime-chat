@@ -10,6 +10,7 @@ type IncomingEvent =
   | { event: "typing_update"; chat_id: string; user_id: string; is_typing: boolean }
   | { event: "member_added"; chat_id: string; user_id: string }
   | { event: "member_removed"; chat_id: string; user_id: string }
+  | { event: "message_deleted"; chat_id: string; message_ids: string[] }
   | { type: "message_status"; message_id?: string; status: string; message?: ChatMessage }
   | { type: "handshake_ack"; connection_id: string }
   | { type: "message_error"; client_message_id?: string; message_id?: string; error: string };
@@ -21,6 +22,7 @@ export interface ChatSocketHandlers {
   onPresence: (users: UserPresence[]) => void;
   onTypingUpdate: (payload: { chatId: string; userId: string; isTyping: boolean }) => void;
   onMembershipChange: (payload: { chatId: string; userId: string; added: boolean }) => void;
+  onMessageDeleted: (payload: { chatId: string; messageIds: string[] }) => void;
   /** Fires after every successful handshake, including reconnects - re-subscribe presence here. */
   onConnected?: () => void;
 }
@@ -140,6 +142,13 @@ export class ChatSocket {
         chatId: payload.chat_id,
         userId: payload.user_id,
         added: payload.event === "member_added",
+      });
+      return;
+    }
+    if ("event" in payload && payload.event === "message_deleted") {
+      this.handlers.onMessageDeleted({
+        chatId: payload.chat_id,
+        messageIds: payload.message_ids,
       });
       return;
     }

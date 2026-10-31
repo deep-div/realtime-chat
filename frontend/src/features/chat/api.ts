@@ -48,3 +48,11 @@ export async function deleteChat(chatId: string): Promise<void> {
     method: "DELETE",
   });
 }
+
+/** Deletes one or more of the caller's own messages for everyone in the chat. */
+export async function deleteMessages(chatId: string, messageIds: string[]): Promise<ChatMessage[]> {
+  return apiFetch<ChatMessage[]>(`/chats/${chatId}/messages`, {
+    method: "DELETE",
+    body: JSON.stringify({ message_ids: messageIds }),
+  });
+}

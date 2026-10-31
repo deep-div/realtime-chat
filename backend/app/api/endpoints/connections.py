@@ -96,6 +96,22 @@ async def notify_membership_change(
                 await _safe_send_json(socket, payload)
 
 
+async def notify_message_deleted(
+    chat_id: str,
+    message_ids: list[str],
+    recipient_ids: list[str],
+    local_connections: dict[str, WebSocket],
+) -> None:
+    """Push a message_deleted update to a chat's other members, for whichever are connected to this process."""
+    payload = {"event": "message_deleted", "chat_id": chat_id, "message_ids": message_ids}
+    for recipient_id in recipient_ids:
+        connections = await connection_registry.get_connections_for_user(recipient_id)
+        for conn in connections:
+            socket = local_connections.get(conn.connection_id)
+            if socket is not None:
+                await _safe_send_json(socket, payload)
+
+
 async def deliver_message(
     session,
     chat_message: ChatMessage,
