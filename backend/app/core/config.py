@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     STORAGE_SERVICE_KEY: str
     STORAGE_AVATAR_BUCKET: str = "avatars"
 
-    FIREBASE_CREDENTIALS_FILE: str
+    FIREBASE_CREDENTIALS_FILE: str = "./secrets/firebase-adminsdk.json"
     DISABLE_AUTH: bool = False
     DEV_USER_ID: str = "dev_uid_tqwatcSdikMYybndtZAr"
     DEV_USER_EMAIL: str = "dev_user@gmail.com"
