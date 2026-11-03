@@ -67,6 +67,16 @@ async def search_users(
     return await user_store.search_users(db, q, exclude_user_id=user_id)
 
 
+@router.get("/suggested", response_model=list[User])
+async def get_suggested_users(
+    limit: int = 10,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> list[User]:
+    """Return a random sample of other users to show as suggested profiles."""
+    return await user_store.suggest_users(db, exclude_user_id=user_id, limit=limit)
+
+
 @router.post("/me/avatar", response_model=User)
 async def upload_my_avatar(
     file: UploadFile = File(...),

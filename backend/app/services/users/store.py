@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import time
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -141,6 +141,23 @@ class UserStore:
             select(UserModel)
             .where(UserModel.username.ilike(f"{query}%"))
             .where(UserModel.user_id != exclude_user_id)
+            .limit(limit)
+        )
+        return [self._row_to_user(row) for row in result.scalars().all()]
+
+    async def suggest_users(
+        self,
+        session: AsyncSession,
+        exclude_user_id: str,
+        exclude_user_ids: list[str] | None = None,
+        limit: int = 10,
+    ) -> list[User]:
+        """Pick a random sample of other users to surface as suggested profiles."""
+        excluded = {exclude_user_id, *(exclude_user_ids or [])}
+        result = await session.execute(
+            select(UserModel)
+            .where(UserModel.user_id.notin_(excluded))
+            .order_by(func.random())
             .limit(limit)
         )
         return [self._row_to_user(row) for row in result.scalars().all()]

@@ -5,10 +5,11 @@ import { CreateGroupModal } from "../../features/chat/components/CreateGroupModa
 import { deleteChat } from "../../features/chat/api";
 import { useChat } from "../../features/chat/hooks/useChat";
 import type { ChatSummary, UserPresence } from "../../features/chat/types";
-import { searchUsers } from "../../features/profile/api";
+import { getSuggestedUsers, searchUsers } from "../../features/profile/api";
 import type { Profile } from "../../features/profile/types";
 import { Avatar } from "../ui/Avatar";
 import { ArrowLeftIcon } from "../ui/ArrowLeftIcon";
+import { ChevronIcon } from "../ui/ChevronIcon";
 import { PlusIcon } from "../ui/PlusIcon";
 import { SearchIcon } from "../ui/SearchIcon";
 import { ContextMenu } from "../ui/ContextMenu";
@@ -201,6 +202,83 @@ function ChatListSkeleton() {
   );
 }
 
+/** Suggested profiles, always behind the same collapse toggle. Rendered as a full-width
+ * list (like chat rows) when it's the only thing in an empty inbox, or as a stories-style
+ * avatar strip when pinned below an existing chat list. */
+function SuggestedSection({
+  users,
+  isLoading,
+  variant,
+  isCollapsed,
+  onToggleCollapsed,
+  onSelectUser,
+}: {
+  users: Profile[];
+  isLoading: boolean;
+  variant: "list" | "avatars";
+  isCollapsed: boolean;
+  onToggleCollapsed: () => void;
+  onSelectUser: (user: Profile) => void;
+}) {
+  if (isLoading || users.length === 0) return null;
+
+  return (
+    <div className={variant === "avatars" ? "shrink-0 border-t border-ink/10 bg-surface-cream" : "shrink-0"}>
+      <button
+        type="button"
+        onClick={onToggleCollapsed}
+        className="flex w-full items-center justify-between gap-2 px-4 py-2"
+      >
+        <span className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">
+          Suggested for you
+        </span>
+        <ChevronIcon
+          className={`h-3.5 w-3.5 shrink-0 text-ink-muted transition-transform ${
+            isCollapsed ? "" : "rotate-90"
+          }`}
+        />
+      </button>
+      {!isCollapsed &&
+        (variant === "list" ? (
+          <div>
+            {users.map((suggested) => (
+              <button
+                key={suggested.user_id}
+                type="button"
+                onClick={() => onSelectUser(suggested)}
+                className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-surface-muted"
+              >
+                <Avatar src={suggested.avatar_url} label={suggested.display_name} className="h-10 w-10" />
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-ink">{suggested.display_name}</p>
+                  <p className="truncate text-xs text-ink-muted">@{suggested.username}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="flex gap-3 overflow-x-auto scrollbar-hide px-4 pb-3">
+            {users.map((suggested) => (
+              <button
+                key={suggested.user_id}
+                type="button"
+                onClick={() => onSelectUser(suggested)}
+                className="flex w-16 shrink-0 flex-col items-center gap-1 text-center"
+              >
+                <Avatar
+                  src={suggested.avatar_url}
+                  label={suggested.display_name}
+                  className="h-14 w-14 ring-2 ring-transparent transition-all hover:ring-primary/40"
+                />
+                <p className="w-full truncate text-[11px] text-ink-muted">{suggested.display_name}</p>
+              </button>
+            ))}
+          </div>
+        ))}
+    </div>
+  );
+}
+
 interface SidebarProps {
   focusSearch?: boolean;
 }
@@ -238,6 +316,11 @@ export function Sidebar({ focusSearch = false }: SidebarProps) {
   const [showSignIn, setShowSignIn] = useState(false);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [isSuggestedLoading, setIsSuggestedLoading] = useState(true);
+  const [suggestedUsers, setSuggestedUsers] = useState<Profile[]>([]);
+  const [isLoadingSuggestedUsers, setIsLoadingSuggestedUsers] = useState(false);
+  const [isTopSuggestedCollapsed, setIsTopSuggestedCollapsed] = useState(false);
+  const [isBottomSuggestedCollapsed, setIsBottomSuggestedCollapsed] = useState(false);
+  const hadChatRef = useRef(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -246,10 +329,41 @@ export function Sidebar({ focusSearch = false }: SidebarProps) {
   }, []);
 
   useEffect(() => {
+    if (!user) {
+      setSuggestedUsers([]);
+      return;
+    }
+    let cancelled = false;
+    setIsLoadingSuggestedUsers(true);
+    getSuggestedUsers(10)
+      .then((users) => {
+        if (!cancelled) setSuggestedUsers(users);
+      })
+      .catch(() => {
+        if (!cancelled) setSuggestedUsers([]);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingSuggestedUsers(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+  useEffect(() => {
     if (focusSearch) {
       searchInputRef.current?.focus();
     }
   }, [focusSearch]);
+
+  // Once the user has at least one real conversation, default the bottom suggestions
+  // strip to collapsed. The top (empty-inbox) list always starts expanded.
+  useEffect(() => {
+    if (chats.length > 0 && !hadChatRef.current) {
+      hadChatRef.current = true;
+      setIsBottomSuggestedCollapsed(true);
+    }
+  }, [chats.length]);
 
   function handleSelectUser(user: Profile) {
     startDirectChat(user);
@@ -275,6 +389,11 @@ export function Sidebar({ focusSearch = false }: SidebarProps) {
 
     return () => clearTimeout(timeoutId);
   }, [query]);
+
+  const existingPeerIds = new Set(
+    chats.filter((chat) => chat.peer).map((chat) => chat.peer!.user_id),
+  );
+  const visibleSuggestedUsers = suggestedUsers.filter((u) => !existingPeerIds.has(u.user_id));
 
   if (!user) {
     return (
@@ -412,23 +531,45 @@ export function Sidebar({ focusSearch = false }: SidebarProps) {
               )}
             </div>
           ) : (
-            <div className="flex-1 overflow-y-auto scrollbar-hide px-2 pt-2">
-              {isLoadingChats ? (
-                <ChatListSkeleton />
-              ) : chats.length === 0 ? null : (
-                chats.map((chat) => (
-                  <ChatRow
-                    key={chat.chat_id}
-                    chat={chat}
-                    isActive={activeChat?.chatId === chat.chat_id}
-                    presenceByUserId={presenceByUserId}
-                    isDeleting={deletingChatId === chat.chat_id}
-                    onOpen={() => openChat(chat)}
-                    onDelete={() => void handleDeleteChat(chat)}
+            <>
+              <div className="flex-1 overflow-y-auto scrollbar-hide px-2 pt-2">
+                {isLoadingChats ? (
+                  <ChatListSkeleton />
+                ) : chats.length === 0 ? (
+                  <SuggestedSection
+                    users={visibleSuggestedUsers}
+                    isLoading={isLoadingSuggestedUsers}
+                    variant="list"
+                    isCollapsed={isTopSuggestedCollapsed}
+                    onToggleCollapsed={() => setIsTopSuggestedCollapsed((prev) => !prev)}
+                    onSelectUser={handleSelectUser}
                   />
-                ))
+                ) : (
+                  chats.map((chat) => (
+                    <ChatRow
+                      key={chat.chat_id}
+                      chat={chat}
+                      isActive={activeChat?.chatId === chat.chat_id}
+                      presenceByUserId={presenceByUserId}
+                      isDeleting={deletingChatId === chat.chat_id}
+                      onOpen={() => openChat(chat)}
+                      onDelete={() => void handleDeleteChat(chat)}
+                    />
+                  ))
+                )}
+              </div>
+
+              {!isLoadingChats && chats.length > 0 && (
+                <SuggestedSection
+                  users={visibleSuggestedUsers.slice(0, 5)}
+                  isLoading={isLoadingSuggestedUsers}
+                  variant="avatars"
+                  isCollapsed={isBottomSuggestedCollapsed}
+                  onToggleCollapsed={() => setIsBottomSuggestedCollapsed((prev) => !prev)}
+                  onSelectUser={handleSelectUser}
+                />
               )}
-            </div>
+            </>
           )}
     </aside>
   );

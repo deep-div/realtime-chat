@@ -32,6 +32,11 @@ export async function searchUsers(query: string): Promise<Profile[]> {
   return apiFetch<Profile[]>(`/users/search?q=${encodeURIComponent(query)}`);
 }
 
+/** Fetches a random sample of other users to show as suggested profiles. */
+export async function getSuggestedUsers(limit = 10): Promise<Profile[]> {
+  return apiFetch<Profile[]>(`/users/suggested?limit=${limit}`);
+}
+
 export async function uploadMyAvatar(file: File): Promise<Profile> {
   const formData = new FormData();
   formData.append("file", file);
