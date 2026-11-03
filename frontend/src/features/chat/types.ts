@@ -24,7 +24,7 @@ export interface ChatSummary extends Chat {
   unread_count: number;
 }
 
-export interface EncryptedContent {
+export interface MessageContent {
   scheme: string;
   ciphertext: string;
 }
@@ -37,7 +37,7 @@ export interface ChatMessage {
   sender_id: string;
   sent_at: number;
   client_message_id: string | null;
-  content: EncryptedContent;
+  content: MessageContent;
   edited_at: number | null;
   deleted_at: number | null;
   /** Client-only field tracking this message's send/delivery state; not present in server payloads. */
@@ -56,8 +56,7 @@ export interface ChatMemberProfile {
 export interface ActiveChat {
   chatId: string;
   chatType: ChatType;
-  /** Set for direct chats; null for groups (and E2E crypto is pairwise-only, so group
-   * messages are currently sent/read as plaintext rather than per-member encrypted). */
+  /** Set for direct chats; null for groups. */
   peer: Profile | null;
   title: string | null;
   avatarUrl: string | null;

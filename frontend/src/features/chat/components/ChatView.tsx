@@ -14,7 +14,6 @@ import { useAuth } from "../../auth/hooks/useAuth";
 import { searchUsers } from "../../profile/api";
 import type { Profile } from "../../profile/types";
 import { addChatMember, getChatMembers, removeChatMember } from "../api";
-import { useDecryptedText } from "../hooks/useDecryptedText";
 import { useChat } from "../hooks/useChat";
 import type { ChatMemberProfile, ChatMessage } from "../types";
 import { EmojiPicker } from "./EmojiPicker";
@@ -460,17 +459,13 @@ function MessagesSkeleton() {
 function MessageBubble({
   message,
   isMine,
-  privateKey,
-  peerPublicKey,
   onDelete,
 }: {
   message: ChatMessage;
   isMine: boolean;
-  privateKey: CryptoKey | null;
-  peerPublicKey: string | null | undefined;
   onDelete: (messageId: string) => void;
 }) {
-  const text = useDecryptedText(message.content, privateKey, peerPublicKey);
+  const text = message.content.ciphertext;
   const isDeleted = !!message.deleted_at;
   const canDelete = isMine && !isDeleted && message.localStatus !== "sending" && message.localStatus !== "error";
   const { position, close, consumeSuppressedClick, triggerProps } = useContextMenu();
@@ -531,7 +526,6 @@ export function ChatView() {
     typingUsersByChatId,
     membershipVersionByChatId,
     setTyping,
-    privateKey,
     closeChat,
     removeChatFromList,
     deleteMessages,
@@ -778,8 +772,6 @@ export function ChatView() {
               key={message.message_id}
               message={message}
               isMine={message.sender_id === profile?.user_id}
-              privateKey={privateKey}
-              peerPublicKey={activeChat.peer?.public_key}
               onDelete={handleDeleteMessage}
             />
           ))

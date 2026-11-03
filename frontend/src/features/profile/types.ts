@@ -5,7 +5,6 @@ export interface Profile {
   bio: string | null;
   status: string | null;
   avatar_url: string | null;
-  public_key: string | null;
   created_at: number;
   updated_at: number;
 }

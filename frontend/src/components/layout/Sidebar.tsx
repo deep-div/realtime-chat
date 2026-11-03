@@ -4,7 +4,6 @@ import { AuthModal } from "../../features/auth/components/AuthModal";
 import { CreateGroupModal } from "../../features/chat/components/CreateGroupModal";
 import { deleteChat } from "../../features/chat/api";
 import { useChat } from "../../features/chat/hooks/useChat";
-import { useDecryptedText } from "../../features/chat/hooks/useDecryptedText";
 import type { ChatSummary, UserPresence } from "../../features/chat/types";
 import { searchUsers } from "../../features/profile/api";
 import type { Profile } from "../../features/profile/types";
@@ -98,14 +97,8 @@ function formatChatTimestamp(timestamp: number): string {
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
-function ChatPreviewText({ chat, privateKey }: { chat: ChatSummary; privateKey: CryptoKey | null }) {
-  const content =
-    chat.last_message !== null
-      ? { scheme: chat.last_message_scheme ?? "plaintext-v0", ciphertext: chat.last_message }
-      : null;
-  const text = useDecryptedText(content, privateKey, chat.peer?.public_key);
-
-  if (content) return <>{text}</>;
+function ChatPreviewText({ chat }: { chat: ChatSummary }) {
+  if (chat.last_message !== null) return <>{chat.last_message}</>;
   if (chat.chat_type === "group") return <>No messages yet</>;
   return <>{chat.peer ? `@${chat.peer.username}` : ""}</>;
 }
@@ -114,7 +107,6 @@ function ChatRow({
   chat,
   isActive,
   presenceByUserId,
-  privateKey,
   isDeleting,
   onOpen,
   onDelete,
@@ -122,7 +114,6 @@ function ChatRow({
   chat: ChatSummary;
   isActive: boolean;
   presenceByUserId: Record<string, UserPresence>;
-  privateKey: CryptoKey | null;
   isDeleting: boolean;
   onOpen: () => void;
   onDelete: () => void;
@@ -168,7 +159,7 @@ function ChatRow({
         </div>
         <div className="flex items-center justify-between gap-2">
           <p className="truncate text-xs text-ink-muted">
-            <ChatPreviewText chat={chat} privateKey={privateKey} />
+            <ChatPreviewText chat={chat} />
           </p>
           {chat.unread_count > 0 && (
             <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-semibold text-primary-foreground">
@@ -223,7 +214,6 @@ export function Sidebar({ focusSearch = false }: SidebarProps) {
     openChat,
     startDirectChat,
     presenceByUserId,
-    privateKey,
     removeChatFromList,
   } = useChat();
   const [deletingChatId, setDeletingChatId] = useState<string | null>(null);
@@ -432,7 +422,6 @@ export function Sidebar({ focusSearch = false }: SidebarProps) {
                     chat={chat}
                     isActive={activeChat?.chatId === chat.chat_id}
                     presenceByUserId={presenceByUserId}
-                    privateKey={privateKey}
                     isDeleting={deletingChatId === chat.chat_id}
                     onOpen={() => openChat(chat)}
                     onDelete={() => void handleDeleteChat(chat)}

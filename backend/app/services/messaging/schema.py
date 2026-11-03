@@ -12,11 +12,8 @@ class MessageStatus(str, Enum):
     READ = "read"  # blue double tick: recipient opened and viewed the message
 
 
-class EncryptedContent(BaseModel):
-    """A text message, encrypted client-side into one opaque blob.
-
-    The server only ever stores/relays `ciphertext` — it never sees the plaintext.
-    """
+class MessageContent(BaseModel):
+    """A plain-text chat message body."""
 
     scheme: str
     ciphertext: str
@@ -27,7 +24,7 @@ class SendMessage(BaseModel):
 
     client_message_id: str
     chat_id: str
-    content: EncryptedContent
+    content: MessageContent
 
 
 class ChatMessage(BaseModel):
@@ -38,7 +35,7 @@ class ChatMessage(BaseModel):
     sender_id: str
     sent_at: int
     client_message_id: str | None = None
-    content: EncryptedContent
+    content: MessageContent
     edited_at: int | None = None
     deleted_at: int | None = None
 

@@ -18,13 +18,10 @@ import {
   updateGroupChat as updateGroupChatApi,
   uploadGroupAvatar as uploadGroupAvatarApi,
 } from "../api";
-import { encryptForPeer } from "../crypto";
-import { useIdentityPrivateKey } from "../hooks/useIdentityKey";
 import { ChatSocket } from "../socket";
 import type { ActiveChat, Chat, ChatMessage, ChatSummary, UserPresence } from "../types";
 
-/** Used only when the peer has no public key uploaded yet - see encryptForPeer. */
-const PLACEHOLDER_SCHEME = "plaintext-v0";
+const PLAINTEXT_SCHEME = "plaintext-v0";
 
 interface ChatContextValue {
   chats: ChatSummary[];
@@ -36,7 +33,6 @@ interface ChatContextValue {
   typingByChatId: Record<string, boolean>;
   typingUsersByChatId: Record<string, string[]>;
   membershipVersionByChatId: Record<string, number>;
-  privateKey: CryptoKey | null;
   openChat: (chat: ChatSummary) => Promise<void>;
   closeChat: () => void;
   removeChatFromList: (chatId: string) => void;
@@ -54,7 +50,6 @@ export const ChatContext = createContext<ChatContextValue | null>(null);
 
 export function ChatProvider({ children }: { children: ReactNode }) {
   const { user, profile } = useAuth();
-  const privateKey = useIdentityPrivateKey();
   const [chats, setChats] = useState<ChatSummary[]>([]);
   // Starts true so the sidebar shows a loading skeleton instead of flashing
   // "no conversations" before the initial GET /chats has even been fired.
@@ -428,9 +423,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       sender_id: profile?.user_id ?? "",
       sent_at: now,
       client_message_id: clientMessageId,
-      // Optimistic bubble shows the plaintext we just typed immediately - no need to
-      // wait on the real encrypt below, which only matters for what goes over the wire.
-      content: { scheme: PLACEHOLDER_SCHEME, ciphertext: text },
+      content: { scheme: PLAINTEXT_SCHEME, ciphertext: text },
       edited_at: null,
       deleted_at: null,
       localStatus: "sending",
@@ -444,7 +437,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     setChats((prev) => {
       const existing = prev.find((c) => c.chat_id === activeChat.chatId);
       const updated: ChatSummary = existing
-        ? { ...existing, last_message: text, last_message_scheme: PLACEHOLDER_SCHEME, last_message_at: now }
+        ? { ...existing, last_message: text, last_message_scheme: PLAINTEXT_SCHEME, last_message_at: now }
         : {
             chat_id: activeChat.chatId,
             chat_type: activeChat.chatType,
@@ -454,7 +447,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
             created_at: now,
             peer: activeChat.peer,
             last_message: text,
-            last_message_scheme: PLACEHOLDER_SCHEME,
+            last_message_scheme: PLAINTEXT_SCHEME,
             last_message_at: now,
             unread_count: 0,
           };
@@ -462,18 +455,11 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       return [updated, ...rest];
     });
 
-    // Group chats have no single peer to derive a pairwise shared key from, so they're
-    // sent as plaintext for now - encryptForPeer already falls back to that when given
-    // no peer key, same as a direct-chat peer who hasn't uploaded a public key yet.
-    const encrypted = privateKey
-      ? await encryptForPeer(privateKey, activeChat.peer?.public_key, text)
-      : { scheme: PLACEHOLDER_SCHEME, ciphertext: text };
-
     socketRef.current?.sendMessage(
       activeChat.chatId,
       clientMessageId,
-      encrypted.ciphertext,
-      encrypted.scheme,
+      text,
+      PLAINTEXT_SCHEME,
     );
   }
 
@@ -494,7 +480,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       typingByChatId,
       typingUsersByChatId,
       membershipVersionByChatId,
-      privateKey,
       openChat,
       closeChat,
       removeChatFromList,
@@ -514,7 +499,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       messagesByChatId,
       isLoadingMessages,
       presenceByUserId,
-      privateKey,
       typingByChatId,
       typingUsersByChatId,
       membershipVersionByChatId,

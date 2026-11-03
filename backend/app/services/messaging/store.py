@@ -13,7 +13,7 @@ from app.core.logging import logger
 from app.services.chat.models import ChatMemberModel
 from app.services.chat.store import ChatNotFoundError, NotAMemberError, chat_store
 from app.services.messaging.models import MessageModel, MessageReceiptModel
-from app.services.messaging.schema import ChatMessage, EncryptedContent, MessageStatus, SendMessage
+from app.services.messaging.schema import ChatMessage, MessageContent, MessageStatus, SendMessage
 
 MESSAGE_CACHE_PREFIX = "chat:messages:"
 MESSAGE_CACHE_MAX = 100
@@ -317,12 +317,12 @@ class MessageStore:
         return self._row_to_message(row) if row is not None else None
 
     def _row_to_message(self, row: MessageModel) -> ChatMessage:
-        # The DB keeps the ciphertext forever, but a deleted message is never served to
+        # The DB keeps the message text forever, but a deleted message is never served to
         # clients - they render a placeholder off deleted_at instead.
         content = (
-            EncryptedContent(scheme=row.scheme, ciphertext="")
+            MessageContent(scheme=row.scheme, ciphertext="")
             if row.deleted_at is not None
-            else EncryptedContent(scheme=row.scheme, ciphertext=row.ciphertext)
+            else MessageContent(scheme=row.scheme, ciphertext=row.ciphertext)
         )
         return ChatMessage(
             message_id=row.message_id,
