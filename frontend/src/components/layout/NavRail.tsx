@@ -1,13 +1,15 @@
 import { useAuth } from "../../features/auth/hooks/useAuth";
 import { Avatar } from "../ui/Avatar";
 import { ChatBubbleIcon } from "../ui/ChatBubbleIcon";
+import { UsersIcon } from "../ui/UsersIcon";
 
 interface NavRailProps {
   onOpenProfile: () => void;
   isProfileOpen: boolean;
+  onCreateGroup: () => void;
 }
 
-export function NavRail({ onOpenProfile, isProfileOpen }: NavRailProps) {
+export function NavRail({ onOpenProfile, isProfileOpen, onCreateGroup }: NavRailProps) {
   const { profile } = useAuth();
 
   return (
@@ -23,6 +25,14 @@ export function NavRail({ onOpenProfile, isProfileOpen }: NavRailProps) {
           }`}
         >
           <ChatBubbleIcon className="h-5.5 w-5.5" />
+        </button>
+        <button
+          type="button"
+          aria-label="New group"
+          onClick={onCreateGroup}
+          className="flex h-11 w-11 items-center justify-center rounded-xl text-ink-muted transition-colors hover:bg-surface-muted hover:text-ink"
+        >
+          <UsersIcon className="h-5.5 w-5.5" />
         </button>
       </nav>
 

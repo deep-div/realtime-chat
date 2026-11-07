@@ -10,7 +10,6 @@ import type { Profile } from "../../features/profile/types";
 import { Avatar } from "../ui/Avatar";
 import { ArrowLeftIcon } from "../ui/ArrowLeftIcon";
 import { ChevronIcon } from "../ui/ChevronIcon";
-import { PlusIcon } from "../ui/PlusIcon";
 import { SearchIcon } from "../ui/SearchIcon";
 import { ContextMenu } from "../ui/ContextMenu";
 import { useContextMenu } from "../ui/useContextMenu";
@@ -281,9 +280,11 @@ function SuggestedSection({
 
 interface SidebarProps {
   focusSearch?: boolean;
+  showCreateGroup: boolean;
+  onCloseCreateGroup: () => void;
 }
 
-export function Sidebar({ focusSearch = false }: SidebarProps) {
+export function Sidebar({ focusSearch = false, showCreateGroup, onCloseCreateGroup }: SidebarProps) {
   const { user } = useAuth();
   const {
     chats,
@@ -314,7 +315,6 @@ export function Sidebar({ focusSearch = false }: SidebarProps) {
   const [results, setResults] = useState<Profile[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showSignIn, setShowSignIn] = useState(false);
-  const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [isSuggestedLoading, setIsSuggestedLoading] = useState(true);
   const [suggestedUsers, setSuggestedUsers] = useState<Profile[]>([]);
   const [isLoadingSuggestedUsers, setIsLoadingSuggestedUsers] = useState(false);
@@ -495,17 +495,9 @@ export function Sidebar({ focusSearch = false }: SidebarProps) {
             className="w-full bg-transparent text-sm text-ink placeholder:text-ink-muted focus:outline-none"
           />
         </div>
-        <button
-          type="button"
-          aria-label="New group"
-          onClick={() => setShowCreateGroup(true)}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-muted text-ink-muted transition-colors hover:bg-primary-soft hover:text-primary"
-        >
-          <PlusIcon className="h-4.5 w-4.5" />
-        </button>
       </div>
 
-      <CreateGroupModal isOpen={showCreateGroup} onClose={() => setShowCreateGroup(false)} />
+      <CreateGroupModal isOpen={showCreateGroup} onClose={onCloseCreateGroup} />
 
       {query.trim() ? (
             <div className="flex-1 overflow-y-auto scrollbar-hide px-2 pt-2">

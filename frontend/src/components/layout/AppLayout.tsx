@@ -38,6 +38,7 @@ export function AppLayout() {
   const { user, isLoading, profile, isProfileLoading } = useAuth();
   const { activeChat } = useChat();
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [showCreateGroup, setShowCreateGroup] = useState(false);
 
   if (isLoading) return <AppShellSkeleton />;
 
@@ -63,6 +64,7 @@ export function AppLayout() {
           <NavRail
             onOpenProfile={() => setIsEditingProfile(true)}
             isProfileOpen={isEditingProfile}
+            onCreateGroup={() => setShowCreateGroup(true)}
           />
         </div>
       )}
@@ -74,7 +76,7 @@ export function AppLayout() {
         {user && isEditingProfile ? (
           <EditProfileView onBack={() => setIsEditingProfile(false)} />
         ) : (
-          <Sidebar />
+          <Sidebar showCreateGroup={showCreateGroup} onCloseCreateGroup={() => setShowCreateGroup(false)} />
         )}
       </div>
       <div className={`min-w-0 flex-1 bg-[#ffffff] ${showListPane ? "hidden" : "flex"} md:flex`}>
