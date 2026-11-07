@@ -3,7 +3,7 @@ from __future__ import annotations
 import time
 import uuid
 
-from sqlalchemy import exists, func, select
+from sqlalchemy import exists, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -404,9 +404,11 @@ class ChatStore:
         """Fetch a page of the user's chats, newest-created first, paired with each direct
         chat's other member id.
 
-        Only chats with at least one sent message are included - a direct chat row is
-        created as soon as you open someone's profile to message them, but it shouldn't
-        show up in either side's chat list until a message actually goes out.
+        Direct chats only show up once a message has actually gone out - a direct chat
+        row is created as soon as you open someone's profile to message them, but it
+        shouldn't appear in either side's chat list before that. Group chats are created
+        explicitly (with members picked up front), so they should show up immediately
+        even with zero messages sent yet.
 
         Bypasses the list_my_chats cache since it needs the direct_user_min/max columns
         that cache doesn't store, and cursor pagination isn't worth caching.
@@ -420,7 +422,10 @@ class ChatStore:
         query = (
             select(ChatModel)
             .join(ChatMemberModel, ChatMemberModel.chat_id == ChatModel.chat_id)
-            .where(ChatMemberModel.user_id == user_id, has_messages)
+            .where(
+                ChatMemberModel.user_id == user_id,
+                or_(ChatModel.chat_type == ChatType.GROUP.value, has_messages),
+            )
             .order_by(ChatModel.created_at.desc(), ChatModel.chat_id.desc())
             .limit(limit)
         )
