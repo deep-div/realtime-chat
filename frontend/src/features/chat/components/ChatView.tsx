@@ -421,12 +421,14 @@ function EditGroupModal({
 function ComingSoonIconButton({
   label,
   children,
+  className = "",
 }: {
   label: string;
   children: React.ReactNode;
+  className?: string;
 }) {
   return (
-    <div className="group relative">
+    <div className={`group relative ${className}`}>
       <button
         type="button"
         aria-label={label}
@@ -434,7 +436,7 @@ function ComingSoonIconButton({
       >
         {children}
       </button>
-      <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-1.5 -translate-x-1/2 whitespace-nowrap rounded-md bg-ink px-2 py-1 text-[11px] font-medium text-white opacity-0 shadow-md transition-opacity duration-150 group-hover:opacity-100">
+      <span className="pointer-events-none absolute right-0 top-full z-10 mt-1.5 max-w-[min(12rem,calc(100vw-1.5rem))] whitespace-nowrap rounded-md bg-ink px-2 py-1 text-[11px] font-medium text-white opacity-0 shadow-md transition-opacity duration-150 group-hover:opacity-100">
         Coming soon
       </span>
     </div>
@@ -477,7 +479,7 @@ function MessageBubble({
         onClick={() => {
           consumeSuppressedClick();
         }}
-        className={`max-w-[70%] rounded-2xl px-4 py-2 text-sm shadow-sm ${canDelete ? "select-none" : ""} ${
+        className={`max-w-[85%] min-w-0 break-words rounded-2xl px-4 py-2 text-sm shadow-sm sm:max-w-[70%] ${canDelete ? "select-none" : ""} ${
           isDeleted
             ? "bg-surface italic text-ink-muted"
             : isMine
@@ -485,7 +487,7 @@ function MessageBubble({
               : "bg-surface text-ink"
         }`}
       >
-        <p>{isDeleted ? "This message was deleted" : text}</p>
+        <p className="break-words">{isDeleted ? "This message was deleted" : text}</p>
         {isMine && !isDeleted && (
           <div className="mt-1 flex justify-end">
             <MessageStatusTicks status={message.localStatus} className="h-3.5 w-3.5 opacity-80" />
@@ -686,7 +688,7 @@ export function ChatView() {
 
   return (
     <div className="flex h-full w-full flex-col">
-      <div className="flex items-center gap-3 border-b border-border px-5 py-4">
+      <div className="flex items-center gap-2 border-b border-border px-3 py-3 sm:gap-3 sm:px-5 sm:py-4">
         <button
           type="button"
           aria-label="Back to chats"
@@ -745,14 +747,14 @@ export function ChatView() {
               onClick={() => setShowMembersModal(true)}
             />
           ) : (
-            <ComingSoonIconButton label="Search in chat">
+            <ComingSoonIconButton label="Search in chat" className="hidden sm:flex">
               <SearchIcon className="h-4.5 w-4.5 stroke-[2.5]" />
             </ComingSoonIconButton>
           )}
           <ComingSoonIconButton label="Voice call">
             <PhoneIcon className="h-4.5 w-4.5 stroke-[2.5]" />
           </ComingSoonIconButton>
-          <ComingSoonIconButton label="Video call">
+          <ComingSoonIconButton label="Video call" className="hidden sm:flex">
             <VideoIcon className="h-4.5 w-4.5 stroke-[2.5]" />
           </ComingSoonIconButton>
           {isGroup && (

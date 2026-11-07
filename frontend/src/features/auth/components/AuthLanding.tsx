@@ -8,7 +8,7 @@ export function AuthLanding() {
 
   return (
     <div className="flex flex-col items-center gap-2 px-6 text-center">
-      <img src={heroImage} alt="" className="h-64 w-full max-w-[36rem] object-contain" />
+      <img src={heroImage} alt="" className="h-40 w-full max-w-[36rem] object-contain sm:h-64" />
 
       <h1 className="mt-3 text-[1.75rem] font-bold tracking-tight text-ink">
         Messenger
@@ -18,7 +18,7 @@ export function AuthLanding() {
       </p>
 
       <div className="mt-6 flex flex-col items-center gap-4">
-        <Button onClick={() => setAuthMode("sign-in")} className="min-w-56">
+        <Button onClick={() => setAuthMode("sign-in")} className="w-full min-w-0 max-w-56">
           Sign in
         </Button>
         <p className="text-sm text-ink-muted">

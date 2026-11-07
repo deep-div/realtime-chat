@@ -40,7 +40,7 @@ export function EmojiPicker({ onSelect, onClose }: EmojiPickerProps) {
   return (
     <div
       ref={containerRef}
-      className="absolute bottom-full right-0 mb-2 w-72 rounded-2xl border border-border bg-surface p-3 shadow-lg"
+      className="absolute bottom-full right-0 mb-2 w-[min(18rem,calc(100vw-2.5rem))] rounded-2xl border border-border bg-surface p-3 shadow-lg"
     >
       <div className="max-h-64 space-y-3 overflow-y-auto scrollbar-hide">
         {EMOJI_GROUPS.map((group) => (
