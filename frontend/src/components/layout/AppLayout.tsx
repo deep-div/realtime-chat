@@ -61,7 +61,9 @@ export function AppLayout() {
 
   // On mobile there's only room for one pane: the chat list (+ nav rail) or the
   // open chat, toggled by whether a chat is active. From md up, both show at once.
-  const showListPane = !activeChat;
+  // Signed out, there's no chat list to show - go straight to the sign-in screen
+  // instead of the dummy "suggested" inbox.
+  const showListPane = !!user && !activeChat;
 
   return (
     <div className="flex h-dvh w-screen overflow-hidden bg-[#ffffff]">
