@@ -37,7 +37,7 @@ interface ChatContextValue {
   closeChat: () => void;
   removeChatFromList: (chatId: string) => void;
   startDirectChat: (peer: Profile) => Promise<void>;
-  createGroupChat: (title: string, memberIds: string[]) => Promise<void>;
+  createGroupChat: (title: string, memberIds: string[], avatarFile?: File) => Promise<void>;
   updateGroupTitle: (chatId: string, title: string) => Promise<void>;
   updateGroupAvatar: (chatId: string, file: File) => Promise<void>;
   removeGroupAvatar: (chatId: string) => Promise<void>;
@@ -350,13 +350,16 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     await loadMessagesIfNeeded(chat.chat_id);
   }
 
-  async function createGroupChat(title: string, memberIds: string[]) {
+  async function createGroupChat(title: string, memberIds: string[], avatarFile?: File) {
     const chat = await createGroupChatApi(title, memberIds);
+    // Avatar upload is keyed by chat_id, so it can only happen once the chat exists -
+    // upload it right after creation and fold the resulting URL into the new chat.
+    const avatarUrl = avatarFile ? (await uploadGroupAvatarApi(chat.chat_id, avatarFile)).avatar_url : null;
     const summary: ChatSummary = {
       chat_id: chat.chat_id,
       chat_type: "group",
       title: chat.title,
-      avatar_url: null,
+      avatar_url: avatarUrl,
       created_by: profile?.user_id ?? "",
       created_at: chat.created_at,
       peer: null,
@@ -371,7 +374,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       chatType: "group",
       peer: null,
       title: chat.title,
-      avatarUrl: null,
+      avatarUrl,
     });
     await loadMessagesIfNeeded(chat.chat_id);
   }

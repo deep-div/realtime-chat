@@ -1,12 +1,15 @@
-import { useEffect, useState } from "react";
+import { type ChangeEvent, useEffect, useRef, useState } from "react";
 import { Avatar } from "../../../components/ui/Avatar";
 import { Button } from "../../../components/ui/Button";
 import { Modal } from "../../../components/ui/Modal";
+import { PencilIcon } from "../../../components/ui/PencilIcon";
 import { SearchIcon } from "../../../components/ui/SearchIcon";
 import { Skeleton } from "../../../components/ui/Skeleton";
 import { searchUsers } from "../../profile/api";
 import type { Profile } from "../../profile/types";
 import { useChat } from "../hooks/useChat";
+
+const MAX_AVATAR_SIZE_BYTES = 5 * 1024 * 1024;
 
 interface CreateGroupModalProps {
   isOpen: boolean;
@@ -34,6 +37,27 @@ export function CreateGroupModal({ isOpen, onClose }: CreateGroupModalProps) {
   const [isSearching, setIsSearching] = useState(false);
   const [selected, setSelected] = useState<Profile[]>([]);
   const [isCreating, setIsCreating] = useState(false);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  function handleAvatarChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > MAX_AVATAR_SIZE_BYTES) {
+      setAvatarError("Group photo must be under 5MB.");
+      return;
+    }
+
+    setAvatarError(null);
+    setAvatarFile(file);
+    setAvatarPreview((previous) => {
+      if (previous) URL.revokeObjectURL(previous);
+      return URL.createObjectURL(file);
+    });
+  }
 
   useEffect(() => {
     const trimmed = query.trim();
@@ -68,6 +92,10 @@ export function CreateGroupModal({ isOpen, onClose }: CreateGroupModalProps) {
     setResults([]);
     setSelected([]);
     setIsCreating(false);
+    if (avatarPreview) URL.revokeObjectURL(avatarPreview);
+    setAvatarFile(null);
+    setAvatarPreview(null);
+    setAvatarError(null);
     onClose();
   }
 
@@ -78,6 +106,7 @@ export function CreateGroupModal({ isOpen, onClose }: CreateGroupModalProps) {
       await createGroupChat(
         groupName.trim(),
         selected.map((u) => u.user_id),
+        avatarFile ?? undefined,
       );
       resetAndClose();
     } catch {
@@ -104,6 +133,33 @@ export function CreateGroupModal({ isOpen, onClose }: CreateGroupModalProps) {
   return (
     <Modal isOpen={isOpen} onClose={resetAndClose}>
       <h2 className="text-lg font-semibold text-ink">New group</h2>
+
+      <div className="mt-4 flex justify-center">
+        <div className="relative">
+          <Avatar
+            src={avatarPreview}
+            label={groupName || "Group"}
+            className="h-20 w-20 ring-4 ring-surface shadow-lg shadow-primary/10"
+            textClassName="text-2xl"
+          />
+          <button
+            type="button"
+            aria-label="Upload group photo"
+            onClick={() => fileInputRef.current?.click()}
+            className="absolute bottom-0 right-0 flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md shadow-primary/40 ring-2 ring-surface transition-transform hover:scale-105 active:scale-95"
+          >
+            <PencilIcon className="h-3.5 w-3.5" />
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            onChange={handleAvatarChange}
+            className="hidden"
+          />
+        </div>
+      </div>
+      {avatarError && <p className="mt-1.5 text-center text-xs text-red-600">{avatarError}</p>}
 
       <input
         type="text"
