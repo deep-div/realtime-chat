@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "../../features/auth/hooks/useAuth";
 import { useChat } from "../../features/chat/hooks/useChat";
 import { CompleteProfileForm } from "../../features/profile/components/CompleteProfileForm";
@@ -39,6 +39,12 @@ export function AppLayout() {
   const { activeChat } = useChat();
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
+
+  // Local UI state like "is the profile editor open" shouldn't survive a sign-out -
+  // otherwise signing back in re-opens whatever view was showing when you signed out.
+  useEffect(() => {
+    setIsEditingProfile(false);
+  }, [user?.uid]);
 
   if (isLoading) return <AppShellSkeleton />;
 
