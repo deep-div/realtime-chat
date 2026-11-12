@@ -1,0 +1,145 @@
+<mxfile host="65bd71144e">
+    <diagram name="High Level Design" id="hld-realtime-chat">
+        <mxGraphModel dx="1597" dy="2194" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1040" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="userA" parent="1" style="shape=actor;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;fontStyle=1;verticalLabelPosition=bottom;verticalAlign=top;" value="User A" vertex="1">
+                    <mxGeometry height="80" width="70" x="80" y="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="userAsub" parent="1" style="text;html=1;fontSize=11;align=center;fontColor=#666666;" value="Browser / Mobile" vertex="1">
+                    <mxGeometry height="20" width="150" x="40" y="158" as="geometry"/>
+                </mxCell>
+                <mxCell id="userB" parent="1" style="shape=actor;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;fontStyle=1;verticalLabelPosition=bottom;verticalAlign=top;" value="User B" vertex="1">
+                    <mxGeometry height="80" width="70" x="80" y="630" as="geometry"/>
+                </mxCell>
+                <mxCell id="userBsub" parent="1" style="text;html=1;fontSize=11;align=center;fontColor=#666666;" value="Browser / Mobile" vertex="1">
+                    <mxGeometry height="20" width="150" x="40" y="718" as="geometry"/>
+                </mxCell>
+                <mxCell id="frontend" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;fontStyle=1;verticalAlign=bottom;spacingBottom=6;" value="React Frontend (Vite)&#xa;ChatContext + Socket Client" vertex="1">
+                    <mxGeometry height="90" width="210" x="320" y="350" as="geometry"/>
+                </mxCell>
+                <mxCell id="frontendBadge" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;" value="" vertex="1">
+                    <mxGeometry height="40" width="40" x="405" y="338" as="geometry"/>
+                </mxCell>
+                <mxCell id="frontendIcon" parent="1" style="shape=image;html=1;image=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjAgMTIwIj4KPGNpcmNsZSBjeD0iNjAiIGN5PSI2MCIgcj0iNyIgZmlsbD0iIzE0OUVDQSIvPgo8ZyBmaWxsPSJub25lIiBzdHJva2U9IiMxNDlFQ0EiIHN0cm9rZS13aWR0aD0iNSI+CjxlbGxpcHNlIGN4PSI2MCIgY3k9IjYwIiByeD0iNDYiIHJ5PSIxOCIvPgo8ZWxsaXBzZSBjeD0iNjAiIGN5PSI2MCIgcng9IjQ2IiByeT0iMTgiIHRyYW5zZm9ybT0icm90YXRlKDYwIDYwIDYwKSIvPgo8ZWxsaXBzZSBjeD0iNjAiIGN5PSI2MCIgcng9IjQ2IiByeT0iMTgiIHRyYW5zZm9ybT0icm90YXRlKDEyMCA2MCA2MCkiLz4KPC9nPgo8L3N2Zz4=;" value="" vertex="1">
+                    <mxGeometry height="34" width="34" x="408" y="341" as="geometry"/>
+                </mxCell>
+                <mxCell id="nginx" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=13;fontStyle=1;verticalAlign=bottom;spacingBottom=6;" value="Nginx&#xa;reverse proxy / static files" vertex="1">
+                    <mxGeometry height="90" width="210" x="630" y="350" as="geometry"/>
+                </mxCell>
+                <mxCell id="nginxBadge" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;" value="" vertex="1">
+                    <mxGeometry height="40" width="40" x="715" y="338" as="geometry"/>
+                </mxCell>
+                <mxCell id="nginxIcon" parent="1" style="shape=image;html=1;image=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjAgMTIwIj4KPHJlY3QgeD0iNSIgeT0iNSIgd2lkdGg9IjExMCIgaGVpZ2h0PSIxMTAiIHJ4PSIxNCIgZmlsbD0iIzAwOTYzOSIvPgo8cGF0aCBkPSJNMzIgODUgVjM1IEw4OCA4NSBWMzUiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2ZmZmZmZiIgc3Ryb2tlLXdpZHRoPSI5IiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KPC9zdmc+;" value="" vertex="1">
+                    <mxGeometry height="34" width="34" x="718" y="341" as="geometry"/>
+                </mxCell>
+                <mxCell id="backend" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=13;fontStyle=1;verticalAlign=bottom;spacingBottom=6;" value="FastAPI Backend&#xa;REST API + WebSocket (Socket.IO)&#xa;uvicorn" vertex="1">
+                    <mxGeometry height="110" width="230" x="940" y="330" as="geometry"/>
+                </mxCell>
+                <mxCell id="backendBadge" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;" value="" vertex="1">
+                    <mxGeometry height="40" width="40" x="1035" y="318" as="geometry"/>
+                </mxCell>
+                <mxCell id="backendIcon" parent="1" style="shape=image;html=1;image=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjAgMTIwIj4KPHBhdGggZD0iTTYwIDEwYy0xNCAwLTI0IDQtMjQgMTZ2MTRoMjZ2NEgyNGMtMTIgMC0yMCAxMC0yMCAyNnM4IDI0IDIwIDI0aDhWNzhjMC0xMiAxMC0yMCAyMi0yMGgyMGMxMCAwIDE4LTggMTgtMThWMjZjMC0xMi0xMC0xNi0zMi0xNnoiIGZpbGw9IiMzNzc2QUIiLz4KPHBhdGggZD0iTTYwIDExMGMxNCAwIDI0LTQgMjQtMTZWODBINTh2LTRoMzhjMTIgMCAyMC0xMCAyMC0yNnMtOC0yNC0yMC0yNGgtOHYxNmMwIDEyLTEwIDIwLTIyIDIwSDQ2Yy0xMCAwLTE4IDgtMTggMTh2MThjMCAxMiAxMCAxNiAzMiAxNnoiIGZpbGw9IiNGRkQ0M0IiLz4KPGNpcmNsZSBjeD0iNDYiIGN5PSIyMiIgcj0iNCIgZmlsbD0iI2ZmZmZmZiIvPgo8Y2lyY2xlIGN4PSI3NCIgY3k9Ijk4IiByPSI0IiBmaWxsPSIjZmZmZmZmIi8+Cjwvc3ZnPg==;" value="" vertex="1">
+                    <mxGeometry height="34" width="34" x="1038" y="321" as="geometry"/>
+                </mxCell>
+                <mxCell id="backendNote" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontSize=11;align=left;spacingLeft=8;dashed=1;" value="- Auth: verifies Firebase ID token&#xa;- Chat/message REST endpoints&#xa;- Socket handlers: send, typing, ack (read/delivered)&#xa;- Computes per-message tick status from receipts" vertex="1">
+                    <mxGeometry height="90" width="270" x="940" y="460" as="geometry"/>
+                </mxCell>
+                <mxCell id="firebase" parent="1" style="shape=cloud;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;fontStyle=1;verticalAlign=bottom;spacingBottom=10;" value="Firebase Auth" vertex="1">
+                    <mxGeometry height="90" width="180" x="1290" y="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="firebaseBadge" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;" value="" vertex="1">
+                    <mxGeometry height="40" width="40" x="1360" y="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="firebaseIcon" parent="1" style="shape=image;html=1;image=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjAgMTIwIj4KPHBhdGggZD0iTTMwIDEwMCBMNDYgMTAgTDY0IDQyIEw3NCAyOCBMOTAgMTAwIFoiIGZpbGw9IiNGRkEwMDAiLz4KPHBhdGggZD0iTTMwIDEwMCBMNDYgMTAgTDU4IDU2IFoiIGZpbGw9IiNGNTdDMDAiLz4KPHBhdGggZD0iTTMwIDEwMCBDMzAgMTAwIDQ4IDExMiA2MCAxMTIgQzcyIDExMiA5MCAxMDAgOTAgMTAwIEM5MCAxMDAgNzIgNzYgNjAgNzYgQzQ4IDc2IDMwIDEwMCAzMCAxMDAgWiIgZmlsbD0iI0ZGQ0EyOCIvPgo8L3N2Zz4=;" value="" vertex="1">
+                    <mxGeometry height="34" width="34" x="1363" y="63" as="geometry"/>
+                </mxCell>
+                <mxCell id="postgres" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;fontStyle=1;boundedLbl=1;verticalAlign=bottom;spacingBottom=4;" value="PostgreSQL&#xa;Chats, Messages,&#xa;Receipts, Members" vertex="1">
+                    <mxGeometry height="90" width="140" x="1310" y="180" as="geometry"/>
+                </mxCell>
+                <mxCell id="postgresBadge" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;" value="" vertex="1">
+                    <mxGeometry height="40" width="40" x="1360" y="175" as="geometry"/>
+                </mxCell>
+                <mxCell id="postgresIcon" parent="1" style="shape=image;html=1;image=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjAgMTIwIj4KPHJlY3QgeD0iNSIgeT0iNSIgd2lkdGg9IjExMCIgaGVpZ2h0PSIxMTAiIHJ4PSIxNCIgZmlsbD0iIzMzNjc5MSIvPgo8cGF0aCBkPSJNMzUgODVjMC0yMCA1LTQwIDI1LTQwczI1IDIwIDI1IDQwIiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmZmZmYiIHN0cm9rZS13aWR0aD0iNyIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CjxjaXJjbGUgY3g9IjQ1IiBjeT0iNTAiIHI9IjQiIGZpbGw9IiNmZmZmZmYiLz4KPGNpcmNsZSBjeD0iNzUiIGN5PSI1MCIgcj0iNCIgZmlsbD0iI2ZmZmZmZiIvPgo8cGF0aCBkPSJNMzggNjBjLTEwIDAtMTQgOC0xMCAxNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmZmZmIiBzdHJva2Utd2lkdGg9IjYiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgo8cGF0aCBkPSJNODIgNjBjMTAgMCAxNCA4IDEwIDE0IiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmZmZmYiIHN0cm9rZS13aWR0aD0iNiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+Cjwvc3ZnPg==;" value="" vertex="1">
+                    <mxGeometry height="34" width="34" x="1363" y="178" as="geometry"/>
+                </mxCell>
+                <mxCell id="redis" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;fontStyle=1;boundedLbl=1;verticalAlign=bottom;spacingBottom=4;" value="Redis&#xa;recent-message cache,&#xa;presence" vertex="1">
+                    <mxGeometry height="90" width="140" x="1310" y="310" as="geometry"/>
+                </mxCell>
+                <mxCell id="redisBadge" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;" value="" vertex="1">
+                    <mxGeometry height="40" width="40" x="1360" y="305" as="geometry"/>
+                </mxCell>
+                <mxCell id="redisIcon" parent="1" style="shape=mxgraph.devicons2.redis;html=1;" value="" vertex="1">
+                    <mxGeometry height="34" width="34" x="1363" y="308" as="geometry"/>
+                </mxCell>
+                <mxCell id="storage" parent="1" style="shape=cloud;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;fontStyle=1;verticalAlign=bottom;spacingBottom=10;" value="Supabase Storage&#xa;avatars" vertex="1">
+                    <mxGeometry height="90" width="180" x="1290" y="440" as="geometry"/>
+                </mxCell>
+                <mxCell id="storageBadge" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;" value="" vertex="1">
+                    <mxGeometry height="40" width="40" x="1360" y="450" as="geometry"/>
+                </mxCell>
+                <mxCell id="storageIcon" parent="1" style="shape=mxgraph.devicons2.supabase;html=1;" value="" vertex="1">
+                    <mxGeometry height="34" width="34" x="1363" y="453" as="geometry"/>
+                </mxCell>
+                <mxCell id="e1" edge="1" parent="1" source="userA" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;startArrow=block;fontSize=11;" target="frontend" value="HTTPS / WSS">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e2" edge="1" parent="1" source="userB" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;startArrow=block;fontSize=11;" target="frontend" value="HTTPS / WSS">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e3" edge="1" parent="1" source="frontend" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;startArrow=block;fontSize=11;" target="nginx" value="HTTP + WS&#xa;(same origin)">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e4" edge="1" parent="1" source="nginx" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;startArrow=block;fontSize=11;" target="backend" value="proxy_pass&#xa;/api, /socket.io">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e5" edge="1" parent="1" source="backend" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=11;" target="firebase" value="verify ID token">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e6" edge="1" parent="1" source="backend" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;startArrow=block;fontSize=11;" target="postgres" value="persist messages,&#xa;receipts, chats">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e7" edge="1" parent="1" source="backend" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;startArrow=block;fontSize=11;" target="redis" value="cache recent msgs,&#xa;presence pub/sub">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e8" edge="1" parent="1" source="backend" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;startArrow=block;fontSize=11;" target="storage" value="upload / fetch&#xa;avatar">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="flowTitle" parent="1" style="text;html=1;fontSize=14;fontStyle=1;align=center;" value="Message send / delivery flow" vertex="1">
+                    <mxGeometry height="30" width="1400" x="60" y="780" as="geometry"/>
+                </mxCell>
+                <mxCell id="step1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;" value="1. User A sends message&#xa;over WebSocket (socket.io)" vertex="1">
+                    <mxGeometry height="60" width="230" x="60" y="820" as="geometry"/>
+                </mxCell>
+                <mxCell id="step2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;" value="2. Backend persists message&#xa;to Postgres, caches in Redis" vertex="1">
+                    <mxGeometry height="60" width="230" x="340" y="820" as="geometry"/>
+                </mxCell>
+                <mxCell id="step3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;" value="3. Backend pushes message&#xa;to User B&#39;s active socket" vertex="1">
+                    <mxGeometry height="60" width="230" x="620" y="820" as="geometry"/>
+                </mxCell>
+                <mxCell id="step4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;" value="4. User B&#39;s client acks&#xa;delivered / read" vertex="1">
+                    <mxGeometry height="60" width="230" x="900" y="820" as="geometry"/>
+                </mxCell>
+                <mxCell id="step5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;" value="5. Backend stores receipt,&#xa;notifies User A (tick update)" vertex="1">
+                    <mxGeometry height="60" width="230" x="1180" y="820" as="geometry"/>
+                </mxCell>
+                <mxCell id="fe1" edge="1" parent="1" source="step1" style="endArrow=block;html=1;" target="step2" value="">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="fe2" edge="1" parent="1" source="step2" style="endArrow=block;html=1;" target="step3" value="">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="fe3" edge="1" parent="1" source="step3" style="endArrow=block;html=1;" target="step4" value="">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="fe4" edge="1" parent="1" source="step4" style="endArrow=block;html=1;" target="step5" value="">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="legend" parent="1" style="text;html=1;fontSize=10;fontStyle=2;align=left;" value="Legend: solid arrows = request/response or live socket traffic, dashed box = backend responsibilities" vertex="1">
+                    <mxGeometry height="20" width="420" x="940" y="570" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>
