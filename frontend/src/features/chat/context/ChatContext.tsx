@@ -292,7 +292,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     }
     setIsLoadingMessages(true);
     try {
-      const history = (await getChatMessages(chatId)).map((m) => ({
+      const history: ChatMessage[] = (await getChatMessages(chatId)).map((m) => ({
         ...m,
         localStatus: m.status ?? m.localStatus,
       }));
