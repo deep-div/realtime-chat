@@ -179,12 +179,19 @@ class MessageStore:
         await session.commit()
 
     async def get_messages(
-        self, session: AsyncSession, chat_id: str, limit: int = 50, after: int | None = None
+        self,
+        session: AsyncSession,
+        chat_id: str,
+        user_id: str,
+        limit: int = 50,
+        after: int | None = None,
     ) -> list[ChatMessage]:
         """Fetch a chat's most recent messages, oldest first. Reads Redis before Postgres.
 
         `after` excludes messages sent at or before that timestamp - used to hide history
         a user has cleared from their own view, without touching the underlying rows.
+        Each message's `status` reflects the best receipt left by any other member, computed
+        fresh on every call so it stays correct even though the cached/stored row doesn't carry it.
         """
         cached = await self._get_cached_messages(chat_id, limit)
         if cached is not None:
@@ -202,7 +209,38 @@ class MessageStore:
 
         if after is not None:
             messages = [m for m in messages if m.sent_at > after]
+
+        statuses = await self._get_receipt_statuses(
+            session, [m.message_id for m in messages], user_id
+        )
+        messages = [
+            m.model_copy(update={"status": statuses.get(m.message_id, MessageStatus.SENT)})
+            for m in messages
+        ]
         return messages
+
+    async def _get_receipt_statuses(
+        self, session: AsyncSession, message_ids: list[str], exclude_user_id: str
+    ) -> dict[str, MessageStatus]:
+        """For each message, the best (highest) receipt status left by any member other than
+        exclude_user_id - i.e. how far a message the caller sent has progressed for its recipients.
+        """
+        if not message_ids:
+            return {}
+
+        result = await session.execute(
+            select(MessageReceiptModel.message_id, MessageReceiptModel.status).where(
+                MessageReceiptModel.message_id.in_(message_ids),
+                MessageReceiptModel.user_id != exclude_user_id,
+            )
+        )
+        rank = {MessageStatus.SENT: 0, MessageStatus.DELIVERED: 1, MessageStatus.READ: 2}
+        best: dict[str, MessageStatus] = {}
+        for message_id, status in result.all():
+            status = MessageStatus(status)
+            if message_id not in best or rank[status] > rank[best[message_id]]:
+                best[message_id] = status
+        return best
 
     async def delete_messages(
         self, session: AsyncSession, chat_id: str, user_id: str, message_ids: list[str]

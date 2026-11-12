@@ -292,7 +292,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     }
     setIsLoadingMessages(true);
     try {
-      const history = await getChatMessages(chatId);
+      const history = (await getChatMessages(chatId)).map((m) => ({
+        ...m,
+        localStatus: m.status ?? m.localStatus,
+      }));
       const historyIds = new Set(history.map((h) => h.message_id));
       let merged = history;
       setMessagesByChatId((prev) => {

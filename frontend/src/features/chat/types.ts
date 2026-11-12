@@ -40,6 +40,8 @@ export interface ChatMessage {
   content: MessageContent;
   edited_at: number | null;
   deleted_at: number | null;
+  /** Server-computed delivery/read state as of the last fetch, from the other member(s)' receipts. */
+  status?: "sent" | "delivered" | "read" | null;
   /** Client-only field tracking this message's send/delivery state; not present in server payloads. */
   localStatus?: MessageDeliveryStatus;
 }

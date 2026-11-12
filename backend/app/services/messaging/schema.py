@@ -38,6 +38,7 @@ class ChatMessage(BaseModel):
     content: MessageContent
     edited_at: int | None = None
     deleted_at: int | None = None
+    status: MessageStatus | None = None
 
 
 class TypingSignal(BaseModel):

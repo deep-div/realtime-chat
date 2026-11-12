@@ -240,7 +240,7 @@ async def get_chat_messages(
     if member is None:
         raise HTTPException(status_code=404, detail="chat not found")
 
-    return await message_store.get_messages(db, chat_id, limit, after=member.cleared_at)
+    return await message_store.get_messages(db, chat_id, user_id, limit, after=member.cleared_at)
 
 
 @router.delete("/{chat_id}/messages", response_model=list[ChatMessage])
