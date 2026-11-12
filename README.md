@@ -15,5 +15,8 @@ A realtime messaging app with direct and group chats, built on a FastAPI + WebSo
 ## Home
 ![Home page](assests/home.PNG)
 
+## Chats
+![Chats](assests/chats.PNG)
+
 
 
