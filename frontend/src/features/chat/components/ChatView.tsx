@@ -544,6 +544,29 @@ export function ChatView() {
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isTypingRef = useRef(false);
   const draftInputRef = useRef<HTMLInputElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const isNearBottomRef = useRef(true);
+
+  // Only auto-scroll to the newest message when the user hasn't scrolled up to read history.
+  const NEAR_BOTTOM_THRESHOLD_PX = 120;
+
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+    const handleScroll = () => {
+      const distanceFromBottom =
+        container.scrollHeight - container.scrollTop - container.clientHeight;
+      isNearBottomRef.current = distanceFromBottom <= NEAR_BOTTOM_THRESHOLD_PX;
+    };
+    container.addEventListener("scroll", handleScroll, { passive: true });
+    return () => container.removeEventListener("scroll", handleScroll);
+  }, [activeChat?.chatId]);
+
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (!container || !isNearBottomRef.current) return;
+    container.scrollTop = container.scrollHeight;
+  }, [messages, activeChat?.chatId]);
 
   // Stop announcing typing when leaving this chat (switch or unmount), not just on send.
   useEffect(() => {
@@ -765,7 +788,10 @@ export function ChatView() {
         </div>
       </div>
 
-      <div className="flex-1 space-y-2 overflow-y-auto scrollbar-hide bg-surface-gray px-5 py-4">
+      <div
+        ref={messagesContainerRef}
+        className="flex-1 space-y-2 overflow-y-auto scrollbar-hide bg-surface-gray px-5 py-4"
+      >
         {isLoadingMessages ? (
           <MessagesSkeleton />
         ) : (
