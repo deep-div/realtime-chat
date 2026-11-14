@@ -13,7 +13,7 @@ A realtime messaging app with direct and group chats, built on a FastAPI + WebSo
 ![Architecture](assests/hld.gif)
 
 ##Demo
-![demo.webm](https://github.com/user-attachments/assets/7d6fb310-3ffd-4815-8f65-6aa265efd31f)
+![demo.mp4](https://github.com/user-attachments/assets/7d6fb310-3ffd-4815-8f65-6aa265efd31f)
 
 ## Login
 ![Login](assests/login.PNG)
