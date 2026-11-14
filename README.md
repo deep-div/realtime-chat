@@ -9,6 +9,9 @@ A realtime messaging app with direct and group chats, built on a FastAPI + WebSo
 * **Profiles:** Username, display name, status, bio, and profile photo upload.
 * **Message Management:** Delete your own messages, with changes reflected for everyone in the chat.
 
+##Demo
+https://github.com/user-attachments/assets/7d6fb310-3ffd-4815-8f65-6aa265efd31f
+
 ## Architecture
 ![Architecture](assests/hld.gif)
 
